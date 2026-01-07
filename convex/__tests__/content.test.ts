@@ -1,0 +1,135 @@
+import { convexTest } from "convex-test";
+import { describe, expect, it } from "vitest";
+import { api } from "../_generated/api";
+import schema from "../schema";
+
+const modules = import.meta.glob("../**/*.ts");
+
+describe("videos", () => {
+  it("returns empty array when no videos exist", async () => {
+    const t = convexTest(schema, modules);
+    const videos = await t.query(api.videos.list);
+    expect(videos).toEqual([]);
+  });
+
+  it("returns videos after adding them", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.videos.add, {
+      youtubeId: "abc123",
+      title: "Test Video",
+      description: "A test video description",
+      thumbnailUrl: "https://example.com/thumb.jpg",
+      publishedAt: "2024-01-15T10:00:00Z",
+      viewCount: 1000,
+    });
+
+    const videos = await t.query(api.videos.list);
+    expect(videos).toHaveLength(1);
+    expect(videos[0].title).toBe("Test Video");
+    expect(videos[0].youtubeId).toBe("abc123");
+    expect(videos[0].viewCount).toBe(1000);
+  });
+
+  it("upserts video with same youtubeId", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.videos.add, {
+      youtubeId: "abc123",
+      title: "Original Title",
+      description: "Original description",
+      thumbnailUrl: "https://example.com/thumb.jpg",
+      publishedAt: "2024-01-15T10:00:00Z",
+    });
+
+    await t.mutation(api.videos.add, {
+      youtubeId: "abc123",
+      title: "Updated Title",
+      description: "Updated description",
+      thumbnailUrl: "https://example.com/thumb.jpg",
+      publishedAt: "2024-01-15T10:00:00Z",
+    });
+
+    const videos = await t.query(api.videos.list);
+    expect(videos).toHaveLength(1);
+    expect(videos[0].title).toBe("Updated Title");
+  });
+});
+
+describe("articles", () => {
+  it("returns empty array when no articles exist", async () => {
+    const t = convexTest(schema, modules);
+    const articles = await t.query(api.articles.list);
+    expect(articles).toEqual([]);
+  });
+
+  it("returns articles after adding them", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.articles.add, {
+      slug: "test-article",
+      title: "Test Article",
+      description: "A test article description",
+      thumbnailUrl: "https://example.com/article.jpg",
+      publishedAt: "2024-01-15T10:00:00Z",
+      url: "https://stack.convex.dev/test-article",
+    });
+
+    const articles = await t.query(api.articles.list);
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe("Test Article");
+    expect(articles[0].slug).toBe("test-article");
+  });
+
+  it("upserts article with same slug", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.articles.add, {
+      slug: "test-article",
+      title: "Original Title",
+      description: "Original description",
+      publishedAt: "2024-01-15T10:00:00Z",
+      url: "https://stack.convex.dev/test-article",
+    });
+
+    await t.mutation(api.articles.add, {
+      slug: "test-article",
+      title: "Updated Title",
+      description: "Updated description",
+      publishedAt: "2024-01-15T10:00:00Z",
+      url: "https://stack.convex.dev/test-article",
+    });
+
+    const articles = await t.query(api.articles.list);
+    expect(articles).toHaveLength(1);
+    expect(articles[0].title).toBe("Updated Title");
+  });
+});
+
+describe("projects", () => {
+  it("returns empty array when no projects exist", async () => {
+    const t = convexTest(schema, modules);
+    const projects = await t.query(api.projects.list);
+    expect(projects).toEqual([]);
+  });
+
+  it("returns projects after adding them", async () => {
+    const t = convexTest(schema, modules);
+
+    await t.mutation(api.projects.add, {
+      name: "My Project",
+      description: "A cool project",
+      sourceUrl: "https://github.com/user/project",
+      demoUrl: "https://project.vercel.app",
+      sourceType: "video",
+      sourceId: "abc123",
+      extractedAt: "2024-01-15T10:00:00Z",
+    });
+
+    const projects = await t.query(api.projects.list);
+    expect(projects).toHaveLength(1);
+    expect(projects[0].name).toBe("My Project");
+    expect(projects[0].sourceUrl).toBe("https://github.com/user/project");
+    expect(projects[0].demoUrl).toBe("https://project.vercel.app");
+  });
+});

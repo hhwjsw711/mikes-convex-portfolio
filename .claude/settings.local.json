@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:stack.convex.dev)",
+      "mcp__plugin_context7_context7__resolve-library-id",
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(npm create:*)",
+      "Bash(npm init:*)",
+      "Bash(npx:*)",
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "WebFetch(domain:www.youtube.com)",
+      "Skill(dev-browser)",
+      "Bash(npm run typecheck:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:docs.convex.dev)"
+    ]
+  }
+}
