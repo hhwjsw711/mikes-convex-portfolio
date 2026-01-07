@@ -11,10 +11,14 @@ import { useState } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 
 type TabType = "videos" | "articles" | "projects";
+type SortOrder = "newest" | "oldest";
+type VisibilityFilter = "all" | "visible" | "hidden";
 
 export function Admin() {
   const { isSignedIn, isLoaded } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>("videos");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("all");
 
   if (!isLoaded) {
     return (
@@ -49,7 +53,17 @@ export function Admin() {
       <main className="container mx-auto px-4 py-8">
         <RefreshButtons />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-        <ContentManager activeTab={activeTab} />
+        <FilterControls
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
+          visibilityFilter={visibilityFilter}
+          onVisibilityFilterChange={setVisibilityFilter}
+        />
+        <ContentManager
+          activeTab={activeTab}
+          sortOrder={sortOrder}
+          visibilityFilter={visibilityFilter}
+        />
       </main>
     </div>
   );
@@ -168,11 +182,104 @@ function TabBar({
   );
 }
 
-function ContentManager({ activeTab }: { activeTab: TabType }) {
+function FilterControls({
+  sortOrder,
+  onSortOrderChange,
+  visibilityFilter,
+  onVisibilityFilterChange,
+}: {
+  sortOrder: SortOrder;
+  onSortOrderChange: (order: SortOrder) => void;
+  visibilityFilter: VisibilityFilter;
+  onVisibilityFilterChange: (filter: VisibilityFilter) => void;
+}) {
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-400">Sort:</label>
+        <select
+          value={sortOrder}
+          onChange={(e) => onSortOrderChange(e.target.value as SortOrder)}
+          className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white focus:border-orange-500 focus:outline-none"
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-400">Show:</label>
+        <select
+          value={visibilityFilter}
+          onChange={(e) => onVisibilityFilterChange(e.target.value as VisibilityFilter)}
+          className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-1.5 text-sm text-white focus:border-orange-500 focus:outline-none"
+        >
+          <option value="all">All items</option>
+          <option value="visible">Visible only</option>
+          <option value="hidden">Hidden only</option>
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function ContentManager({
+  activeTab,
+  sortOrder,
+  visibilityFilter,
+}: {
+  activeTab: TabType;
+  sortOrder: SortOrder;
+  visibilityFilter: VisibilityFilter;
+}) {
   const content = useQuery(api.admin.getAllContent);
-  const setVideoHidden = useMutation(api.admin.setVideoHidden);
-  const setArticleHidden = useMutation(api.admin.setArticleHidden);
-  const setProjectHidden = useMutation(api.admin.setProjectHidden);
+
+  // Optimistic update for videos
+  const setVideoHidden = useMutation(
+    api.admin.setVideoHidden
+  ).withOptimisticUpdate((localStore, args) => {
+    const currentContent = localStore.getQuery(api.admin.getAllContent, {});
+    if (currentContent) {
+      const updatedVideos = currentContent.videos.map((v) =>
+        v._id === args.id ? { ...v, isHidden: args.isHidden } : v
+      );
+      localStore.setQuery(api.admin.getAllContent, {}, {
+        ...currentContent,
+        videos: updatedVideos,
+      });
+    }
+  });
+
+  // Optimistic update for articles
+  const setArticleHidden = useMutation(
+    api.admin.setArticleHidden
+  ).withOptimisticUpdate((localStore, args) => {
+    const currentContent = localStore.getQuery(api.admin.getAllContent, {});
+    if (currentContent) {
+      const updatedArticles = currentContent.articles.map((a) =>
+        a._id === args.id ? { ...a, isHidden: args.isHidden } : a
+      );
+      localStore.setQuery(api.admin.getAllContent, {}, {
+        ...currentContent,
+        articles: updatedArticles,
+      });
+    }
+  });
+
+  // Optimistic update for projects
+  const setProjectHidden = useMutation(
+    api.admin.setProjectHidden
+  ).withOptimisticUpdate((localStore, args) => {
+    const currentContent = localStore.getQuery(api.admin.getAllContent, {});
+    if (currentContent) {
+      const updatedProjects = currentContent.projects.map((p) =>
+        p._id === args.id ? { ...p, isHidden: args.isHidden } : p
+      );
+      localStore.setQuery(api.admin.getAllContent, {}, {
+        ...currentContent,
+        projects: updatedProjects,
+      });
+    }
+  });
 
   if (!content) {
     return (
@@ -197,20 +304,44 @@ function ContentManager({ activeTab }: { activeTab: TabType }) {
     }
   };
 
-  const items =
+  // Get items for active tab and apply filtering/sorting
+  type ContentItem = {
+    _id: string;
+    _creationTime: number;
+    title?: string;
+    name?: string;
+    isHidden?: boolean;
+    thumbnailUrl?: string;
+  };
+
+  const rawItems: ContentItem[] =
     activeTab === "videos"
       ? content.videos
       : activeTab === "articles"
         ? content.articles
         : content.projects;
 
+  // Apply visibility filter
+  let items = rawItems.filter((item) => {
+    if (visibilityFilter === "visible") return !item.isHidden;
+    if (visibilityFilter === "hidden") return item.isHidden;
+    return true;
+  });
+
+  // Apply sort order (using _creationTime)
+  items = items.sort((a, b) => {
+    return sortOrder === "newest"
+      ? b._creationTime - a._creationTime
+      : a._creationTime - b._creationTime;
+  });
+
   return (
-    <div className="space-y-2">
+    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
       {items.length === 0 ? (
-        <p className="text-gray-400 text-center py-8">No {activeTab} found.</p>
+        <p className="col-span-full text-gray-400 text-center py-8">No {activeTab} found.</p>
       ) : (
         items.map((item) => (
-          <ContentRow
+          <ContentCard
             key={item._id}
             item={item}
             type={activeTab}
@@ -222,7 +353,7 @@ function ContentManager({ activeTab }: { activeTab: TabType }) {
   );
 }
 
-function ContentRow({
+function ContentCard({
   item,
   type,
   onToggle,
@@ -242,39 +373,51 @@ function ContentRow({
 
   return (
     <div
-      className={`flex items-center gap-4 p-4 rounded-lg ${
-        isHidden ? "bg-gray-900/50 opacity-60" : "bg-gray-900"
+      className={`flex flex-col overflow-hidden rounded-lg border transition-all ${
+        isHidden
+          ? "border-gray-800 bg-gray-900/50 opacity-60"
+          : "border-gray-700 bg-gray-900"
       }`}
     >
-      {item.thumbnailUrl && (
-        <img
-          src={item.thumbnailUrl}
-          alt={title}
-          className="w-16 h-12 object-cover rounded"
-        />
+      {item.thumbnailUrl ? (
+        <div className="relative aspect-video overflow-hidden">
+          <img
+            src={item.thumbnailUrl}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
+          <div
+            className={`absolute right-2 top-2 rounded px-2 py-1 text-xs font-medium ${
+              isHidden ? "bg-red-600 text-white" : "bg-green-600 text-white"
+            }`}
+          >
+            {isHidden ? "Hidden" : "Visible"}
+          </div>
+        </div>
+      ) : (
+        <div className="flex aspect-video items-center justify-center bg-gray-800">
+          <span className="text-gray-500">No thumbnail</span>
+        </div>
       )}
-      <div className="flex-1 min-w-0">
+      <div className="flex flex-col gap-3 p-3">
         <h3
-          className={`font-medium truncate ${isHidden ? "text-gray-500 line-through" : "text-white"}`}
+          className={`line-clamp-2 text-sm font-medium ${
+            isHidden ? "text-gray-500 line-through" : "text-white"
+          }`}
         >
           {title}
         </h3>
-        <span
-          className={`text-xs ${isHidden ? "text-red-400" : "text-green-400"}`}
+        <button
+          onClick={() => onToggle(type, item._id, isHidden)}
+          className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+            isHidden
+              ? "bg-green-600 hover:bg-green-700 text-white"
+              : "bg-red-600 hover:bg-red-700 text-white"
+          }`}
         >
-          {isHidden ? "Hidden" : "Visible"}
-        </span>
+          {isHidden ? "Show" : "Hide"}
+        </button>
       </div>
-      <button
-        onClick={() => onToggle(type, item._id, isHidden)}
-        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-          isHidden
-            ? "bg-green-600 hover:bg-green-700 text-white"
-            : "bg-red-600 hover:bg-red-700 text-white"
-        }`}
-      >
-        {isHidden ? "Show" : "Hide"}
-      </button>
     </div>
   );
 }

@@ -40,6 +40,8 @@ interface YouTubeVideosResponse {
     };
     statistics?: {
       viewCount?: string;
+      likeCount?: string;
+      commentCount?: string;
     };
     contentDetails?: {
       duration?: string;
@@ -49,7 +51,8 @@ interface YouTubeVideosResponse {
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3";
 
-export const refresh = internalAction({
+// Fetch all videos with pagination (for full refresh)
+export const refreshAll = internalAction({
   args: {},
   handler: async (ctx) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
@@ -77,9 +80,139 @@ export const refresh = internalAction({
       const uploadsPlaylistId =
         channelData.items[0].contentDetails.relatedPlaylists.uploads;
 
-      // Step 2: Get video IDs from the uploads playlist (up to 50)
+      // Step 2: Get all video IDs from the uploads playlist (paginated)
+      const videoIds: string[] = [];
+      let nextPageToken: string | undefined;
+
+      do {
+        const pageTokenParam = nextPageToken ? `&pageToken=${nextPageToken}` : "";
+        const playlistResponse = await fetch(
+          `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageTokenParam}&key=${apiKey}`
+        );
+        const playlistData: YouTubePlaylistItemsResponse =
+          await playlistResponse.json();
+
+        if (playlistData.items && playlistData.items.length > 0) {
+          for (const item of playlistData.items) {
+            videoIds.push(item.snippet.resourceId.videoId);
+          }
+        }
+
+        nextPageToken = playlistData.nextPageToken;
+      } while (nextPageToken);
+
+      if (videoIds.length === 0) {
+        console.log("No videos found in playlist");
+        return { success: true, videosProcessed: 0 };
+      }
+
+      console.log(`Found ${videoIds.length} videos in playlist`);
+
+      // Step 3: Get full video details (in batches of 50)
+      const allVideos: YouTubeVideosResponse["items"] = [];
+
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const batch = videoIds.slice(i, i + 50);
+        const videosResponse = await fetch(
+          `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${batch.join(",")}&key=${apiKey}`
+        );
+        const videosData: YouTubeVideosResponse = await videosResponse.json();
+
+        if (videosData.items) {
+          allVideos.push(...videosData.items);
+        }
+      }
+
+      // Step 4: Store each video and extract projects
+      let processedCount = 0;
+      for (const video of allVideos) {
+        const thumbnail =
+          video.snippet.thumbnails.high?.url ||
+          video.snippet.thumbnails.medium?.url ||
+          video.snippet.thumbnails.default?.url ||
+          "";
+
+        // Upsert the video
+        await ctx.runMutation(internal.videos.upsert, {
+          youtubeId: video.id,
+          title: video.snippet.title,
+          description: video.snippet.description,
+          thumbnailUrl: thumbnail,
+          publishedAt: video.snippet.publishedAt,
+          viewCount: video.statistics?.viewCount
+            ? parseInt(video.statistics.viewCount, 10)
+            : undefined,
+          likeCount: video.statistics?.likeCount
+            ? parseInt(video.statistics.likeCount, 10)
+            : undefined,
+          commentCount: video.statistics?.commentCount
+            ? parseInt(video.statistics.commentCount, 10)
+            : undefined,
+          duration: video.contentDetails?.duration,
+        });
+
+        // Extract and store projects from video description
+        const projectLinks = extractProjectLinks(video.snippet.description);
+        if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+          await ctx.runMutation(internal.projects.upsert, {
+            name: projectLinks.projectName || video.snippet.title,
+            description: video.snippet.description.slice(0, 200),
+            sourceUrl: projectLinks.sourceUrl,
+            demoUrl: projectLinks.demoUrl,
+            thumbnailUrl: thumbnail,
+            sourceType: "video",
+            sourceId: video.id,
+            extractedAt: new Date().toISOString(),
+          });
+        }
+
+        processedCount++;
+      }
+
+      console.log(`YouTube full refresh complete. Processed ${processedCount} videos.`);
+      return { success: true, videosProcessed: processedCount };
+    } catch (error) {
+      console.error("Error refreshing YouTube videos:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+});
+
+// Fetch only the latest 20 videos (for frequent refresh)
+export const refreshLatest = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    const channelId = process.env.YOUTUBE_CHANNEL_ID;
+
+    if (!apiKey || !channelId) {
+      console.log(
+        "YouTube API key or channel ID not configured. Skipping refresh."
+      );
+      return { success: false, error: "Missing configuration" };
+    }
+
+    try {
+      // Step 1: Get the uploads playlist ID
+      const channelResponse = await fetch(
+        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
+      );
+      const channelData: YouTubeChannelResponse = await channelResponse.json();
+
+      if (!channelData.items || channelData.items.length === 0) {
+        console.error("Channel not found");
+        return { success: false, error: "Channel not found" };
+      }
+
+      const uploadsPlaylistId =
+        channelData.items[0].contentDetails.relatedPlaylists.uploads;
+
+      // Step 2: Get video IDs from the uploads playlist (latest 20 only)
       const playlistResponse = await fetch(
-        `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`
+        `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=20&key=${apiKey}`
       );
       const playlistData: YouTubePlaylistItemsResponse =
         await playlistResponse.json();
@@ -118,6 +251,12 @@ export const refresh = internalAction({
           viewCount: video.statistics?.viewCount
             ? parseInt(video.statistics.viewCount, 10)
             : undefined,
+          likeCount: video.statistics?.likeCount
+            ? parseInt(video.statistics.likeCount, 10)
+            : undefined,
+          commentCount: video.statistics?.commentCount
+            ? parseInt(video.statistics.commentCount, 10)
+            : undefined,
           duration: video.contentDetails?.duration,
         });
 
@@ -139,10 +278,10 @@ export const refresh = internalAction({
         processedCount++;
       }
 
-      console.log(`YouTube refresh complete. Processed ${processedCount} videos.`);
+      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos.`);
       return { success: true, videosProcessed: processedCount };
     } catch (error) {
-      console.error("Error refreshing YouTube videos:", error);
+      console.error("Error refreshing latest YouTube videos:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -151,10 +290,10 @@ export const refresh = internalAction({
   },
 });
 
-// Manual trigger for testing
+// Manual trigger for testing (full refresh)
 export const manualRefresh = action({
   args: {},
   handler: async (ctx): Promise<{ success: boolean; videosProcessed?: number; error?: string }> => {
-    return await ctx.runAction(internal.youtube.refresh, {});
+    return await ctx.runAction(internal.youtube.refreshAll, {});
   },
 });

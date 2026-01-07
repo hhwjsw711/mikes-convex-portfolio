@@ -9,6 +9,8 @@ export default defineSchema({
     thumbnailUrl: v.string(),
     publishedAt: v.string(),
     viewCount: v.optional(v.number()),
+    likeCount: v.optional(v.number()),
+    commentCount: v.optional(v.number()),
     duration: v.optional(v.string()),
     isHidden: v.optional(v.boolean()),
   })

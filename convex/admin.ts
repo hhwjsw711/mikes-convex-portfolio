@@ -1,5 +1,6 @@
 import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { v } from "convex/values";
+import { replaceVideoAggregates } from "./videoAggregates";
 
 const ADMIN_EMAIL = "mike.cann@gmail.com";
 
@@ -20,7 +21,14 @@ export const setVideoHidden = mutation({
   args: { id: v.id("videos"), isHidden: v.boolean() },
   handler: async (ctx, { id, isHidden }) => {
     await requireAuth(ctx);
+    const oldDoc = await ctx.db.get(id);
+    if (!oldDoc) throw new Error("Video not found");
+
     await ctx.db.patch(id, { isHidden });
+    const newDoc = await ctx.db.get(id);
+    if (newDoc) {
+      await replaceVideoAggregates(ctx, oldDoc, newDoc);
+    }
   },
 });
 

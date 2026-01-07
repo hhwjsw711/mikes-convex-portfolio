@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { Header } from "../components/Header";
 import { ContentGrid } from "../components/ContentGrid";
 import { FilterBar } from "../components/FilterBar";
+import { VideoStatsCards } from "../components/VideoStatsCards";
 import { useState } from "react";
 import { useAdmin } from "../hooks/useAdmin";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -15,6 +16,7 @@ export function Home() {
   const videos = useQuery(api.videos.list);
   const articles = useQuery(api.articles.list);
   const projects = useQuery(api.projects.list);
+  const videoStats = useQuery(api.videos.stats);
 
   const hideVideo = useMutation(api.admin.setVideoHidden);
   const hideArticle = useMutation(api.admin.setArticleHidden);
@@ -46,6 +48,14 @@ export function Home() {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <FilterBar currentFilter={filter} onFilterChange={setFilter} counts={counts} />
+        {filter === "videos" && videoStats && (
+          <VideoStatsCards
+            totalViews={videoStats.totalViews}
+            totalLikes={videoStats.totalLikes}
+            totalComments={videoStats.totalComments}
+            videoCount={videoStats.videoCount}
+          />
+        )}
         <ContentGrid
           videos={videos ?? []}
           articles={articles ?? []}

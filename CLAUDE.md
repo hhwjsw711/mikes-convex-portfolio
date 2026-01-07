@@ -5,16 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build and Development Commands
 
 ```bash
-bun run dev          # Start Vite dev server (frontend)
-bunx convex dev      # Start Convex dev server (backend) - run in separate terminal
+bun run dev          # Start both Vite (frontend) and Convex (backend) dev servers
 bun run build        # Type check and build for production
 bun run typecheck    # TypeScript type checking only
 bun run lint         # Run ESLint
 bun test             # Run tests with Vitest (watch mode)
 bun test --run       # Run tests once
 ```
-
-For development, run both `bun run dev` and `bunx convex dev` in separate terminals.
 
 ## Running Single Tests
 

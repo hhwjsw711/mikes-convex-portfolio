@@ -3,11 +3,19 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Refresh YouTube videos every hour
-crons.hourly(
-  "refreshYouTube",
-  { minuteUTC: 0 },
-  internal.youtube.refresh,
+// Refresh latest 20 YouTube videos every 12 hours
+crons.interval(
+  "refreshYouTubeLatest",
+  { hours: 12 },
+  internal.youtube.refreshLatest,
+  {}
+);
+
+// Full refresh of all YouTube videos every 48 hours
+crons.interval(
+  "refreshYouTubeAll",
+  { hours: 48 },
+  internal.youtube.refreshAll,
   {}
 );
 

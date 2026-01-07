@@ -121,8 +121,18 @@ export function ContentCard({ type, data, compact = false, isAdmin = false, onHi
         </p>
         <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
           <span>{formattedDate}</span>
-          {isVideo && video?.viewCount && (
-            <span>{video.viewCount.toLocaleString()} views</span>
+          {isVideo && video && (
+            <div className="flex items-center gap-3">
+              {video.viewCount !== undefined && (
+                <span title="Views">{video.viewCount.toLocaleString()} views</span>
+              )}
+              {video.likeCount !== undefined && (
+                <span title="Likes">{video.likeCount.toLocaleString()} likes</span>
+              )}
+              {video.commentCount !== undefined && (
+                <span title="Comments">{video.commentCount.toLocaleString()} comments</span>
+              )}
+            </div>
           )}
         </div>
       </div>
