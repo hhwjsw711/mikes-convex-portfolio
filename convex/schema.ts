@@ -34,6 +34,21 @@ export default defineSchema({
     .index("by_slug", ["slug"])
     .index("by_publishedAt", ["publishedAt"]),
 
+  // Tweets from X (Twitter) - only user's own posts
+  tweets: defineTable({
+    tweetId: v.string(),
+    text: v.string(),
+    publishedAt: v.string(),
+    url: v.string(),
+    mediaUrls: v.optional(v.array(v.string())),
+    retweetCount: v.optional(v.number()),
+    replyCount: v.optional(v.number()),
+    likeCount: v.optional(v.number()),
+    viewCount: v.optional(v.number()),
+  })
+    .index("by_tweetId", ["tweetId"])
+    .index("by_publishedAt", ["publishedAt"]),
+
   // Projects are created from "mine" content, can be hidden by admin
   projects: defineTable({
     name: v.string(),
@@ -44,6 +59,8 @@ export default defineSchema({
     sourceType: v.union(v.literal("video"), v.literal("article")),
     sourceId: v.string(),
     extractedAt: v.string(),
+    // Publication date from the source video/article (for sorting)
+    publishedAt: v.optional(v.string()),
     // Normalized name for fuzzy duplicate detection (lowercase, hyphenated)
     normalizedName: v.optional(v.string()),
     // Admin can hide projects
@@ -53,5 +70,6 @@ export default defineSchema({
     .index("by_sourceType", ["sourceType"])
     .index("by_sourceId", ["sourceId"])
     .index("by_sourceUrl", ["sourceUrl"])
-    .index("by_normalizedName", ["normalizedName"]),
+    .index("by_normalizedName", ["normalizedName"])
+    .index("by_publishedAt", ["publishedAt"]),
 });

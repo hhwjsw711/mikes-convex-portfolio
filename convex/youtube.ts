@@ -196,6 +196,7 @@ export const refreshAll = internalAction({
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
+              publishedAt: video.snippet.publishedAt,
             });
             projectsExtracted++;
           }
@@ -217,6 +218,7 @@ export const refreshAll = internalAction({
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
+              publishedAt: video.snippet.publishedAt,
             });
             projectsExtracted++;
           }
@@ -358,6 +360,7 @@ export const refreshLatest = internalAction({
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
+              publishedAt: video.snippet.publishedAt,
             });
             projectsExtracted++;
           }
@@ -379,6 +382,7 @@ export const refreshLatest = internalAction({
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
+              publishedAt: video.snippet.publishedAt,
             });
             projectsExtracted++;
           }
@@ -447,6 +451,7 @@ export const extractProjectsForVideo = internalAction({
           sourceType: "video",
           sourceId: video.youtubeId,
           extractedAt: new Date().toISOString(),
+          publishedAt: video.publishedAt,
         });
         projectsExtracted++;
       }
@@ -468,6 +473,7 @@ export const extractProjectsForVideo = internalAction({
           sourceType: "video",
           sourceId: video.youtubeId,
           extractedAt: new Date().toISOString(),
+          publishedAt: video.publishedAt,
         });
         projectsExtracted++;
       }
@@ -569,5 +575,64 @@ export const reparseThumbnails = internalAction({
       `Thumbnail re-parse complete: ${updated} updated, ${noImage} no image found, ${skipped} skipped (no GitHub URL)`
     );
     return { updated, noImage, skipped };
+  },
+});
+
+// Backfill publishedAt for all projects from their source videos/articles
+export const backfillProjectDates = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const projects = await ctx.runQuery(internal.projects.listAll);
+
+    console.log(`Found ${projects.length} projects to backfill dates`);
+
+    let updated = 0;
+    let skipped = 0;
+    let notFound = 0;
+
+    for (const project of projects) {
+      // Skip if already has publishedAt
+      if (project.publishedAt) {
+        skipped++;
+        continue;
+      }
+
+      let publishedAt: string | undefined;
+
+      if (project.sourceType === "video") {
+        // Look up the video
+        const video = await ctx.runQuery(internal.videos.getByYoutubeId, {
+          youtubeId: project.sourceId,
+        });
+        if (video) {
+          publishedAt = video.publishedAt;
+        }
+      } else if (project.sourceType === "article") {
+        // Look up the article
+        const article = await ctx.runQuery(internal.articles.getBySlug, {
+          slug: project.sourceId,
+        });
+        if (article) {
+          publishedAt = article.publishedAt;
+        }
+      }
+
+      if (publishedAt) {
+        await ctx.runMutation(internal.projects.updatePublishedAt, {
+          id: project._id,
+          publishedAt,
+        });
+        console.log(`Updated "${project.name}" with publishedAt: ${publishedAt}`);
+        updated++;
+      } else {
+        console.log(`Could not find source for "${project.name}" (${project.sourceType}: ${project.sourceId})`);
+        notFound++;
+      }
+    }
+
+    console.log(
+      `Date backfill complete: ${updated} updated, ${skipped} already had date, ${notFound} source not found`
+    );
+    return { updated, skipped, notFound };
   },
 });

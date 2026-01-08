@@ -6,6 +6,7 @@ interface FilterBarProps {
   counts: {
     videos: number;
     articles: number;
+    tweets: number;
     projects: number;
   };
 }
@@ -34,6 +35,14 @@ function ArticleIcon({ className }: { className?: string }) {
   );
 }
 
+function TweetIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 function ProjectIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -46,12 +55,13 @@ const filters: { value: ContentType; label: string; icon: typeof GridIcon }[] = 
   { value: "all", label: "All", icon: GridIcon },
   { value: "videos", label: "Videos", icon: VideoIcon },
   { value: "articles", label: "Articles", icon: ArticleIcon },
+  { value: "tweets", label: "Tweets", icon: TweetIcon },
   { value: "projects", label: "Projects", icon: ProjectIcon },
 ];
 
 export function FilterBar({ currentFilter, onFilterChange, counts }: FilterBarProps) {
   const getCount = (filter: ContentType): number => {
-    if (filter === "all") return counts.videos + counts.articles + counts.projects;
+    if (filter === "all") return counts.videos + counts.articles + counts.tweets + counts.projects;
     return counts[filter];
   };
 

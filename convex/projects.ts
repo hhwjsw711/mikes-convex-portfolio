@@ -19,6 +19,7 @@ export const upsert = internalMutation({
     sourceType: v.union(v.literal("video"), v.literal("article")),
     sourceId: v.string(),
     extractedAt: v.string(),
+    publishedAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await upsertProject(ctx, args);
@@ -36,6 +37,7 @@ export const add = mutation({
     sourceType: v.union(v.literal("video"), v.literal("article")),
     sourceId: v.string(),
     extractedAt: v.string(),
+    publishedAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await upsertProject(ctx, args);
@@ -73,5 +75,16 @@ export const updateThumbnail = internalMutation({
   },
   handler: async (ctx, { id, thumbnailUrl }) => {
     await ctx.db.patch(id, { thumbnailUrl });
+  },
+});
+
+// Internal mutation to update a project's publishedAt
+export const updatePublishedAt = internalMutation({
+  args: {
+    id: v.id("projects"),
+    publishedAt: v.string(),
+  },
+  handler: async (ctx, { id, publishedAt }) => {
+    await ctx.db.patch(id, { publishedAt });
   },
 });

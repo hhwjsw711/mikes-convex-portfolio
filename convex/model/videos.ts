@@ -34,11 +34,16 @@ export async function getAllVideos(ctx: QueryCtx) {
 
 export async function getVisibleVideos(ctx: QueryCtx) {
   // Only videos marked as "mine" are visible
-  return await ctx.db
+  // Query by isMikes index, then sort by publishedAt in memory
+  const videos = await ctx.db
     .query("videos")
     .withIndex("by_isMikes", (q) => q.eq("isMikes", "mine"))
-    .order("desc")
     .collect();
+
+  // Sort by publishedAt descending (newest first)
+  return videos.sort((a, b) =>
+    new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+  );
 }
 
 export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {

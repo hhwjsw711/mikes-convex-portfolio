@@ -10,6 +10,7 @@ export interface ProjectData {
   sourceType: "video" | "article";
   sourceId: string;
   extractedAt: string;
+  publishedAt?: string;
 }
 
 export async function getProjectBySourceId(ctx: QueryCtx, sourceId: string) {
@@ -64,7 +65,15 @@ export async function getAllProjects(ctx: QueryCtx) {
 export async function getVisibleProjects(ctx: QueryCtx) {
   // Projects are created from "mine" content, but can be hidden by admin
   const projects = await getAllProjects(ctx);
-  return projects.filter((p) => !p.isHidden);
+  const visible = projects.filter((p) => !p.isHidden);
+
+  // Sort by publishedAt descending (newest first)
+  // Fall back to extractedAt if publishedAt is not set
+  return visible.sort((a, b) => {
+    const dateA = a.publishedAt || a.extractedAt;
+    const dateB = b.publishedAt || b.extractedAt;
+    return new Date(dateB).getTime() - new Date(dateA).getTime();
+  });
 }
 
 /**

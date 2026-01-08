@@ -3,7 +3,9 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { ContentType } from "../pages/Home";
 import type { Doc } from "../../convex/_generated/dataModel";
+import Masonry from "react-masonry-css";
 import { ContentCard } from "./ContentCard";
+import { TweetCard } from "./TweetCard";
 import { ProjectCard } from "./ProjectCard";
 import { LoadingState } from "./LoadingState";
 
@@ -12,6 +14,7 @@ type VideoTab = "longform" | "shorts";
 interface ContentGridProps {
   videos: Doc<"videos">[];
   articles: Doc<"articles">[];
+  tweets: Doc<"tweets">[];
   projects: Doc<"projects">[];
   filter: ContentType;
   isLoading: boolean;
@@ -37,6 +40,7 @@ function isShort(video: Doc<"videos">): boolean {
 export function ContentGrid({
   videos,
   articles,
+  tweets,
   projects,
   filter,
   isLoading,
@@ -175,12 +179,13 @@ export function ContentGrid({
 
   const showVideos = filter === "all";
   const showArticles = filter === "all" || filter === "articles";
+  const showTweets = filter === "all" || filter === "tweets";
   const showProjects = filter === "all" || filter === "projects";
 
   // Combine and sort all content by date
   const allContent: Array<{
-    type: "video" | "article" | "project";
-    data: Doc<"videos"> | Doc<"articles"> | Doc<"projects">;
+    type: "video" | "article" | "tweet" | "project";
+    data: Doc<"videos"> | Doc<"articles"> | Doc<"tweets"> | Doc<"projects">;
     date: string;
   }> = [];
 
@@ -200,12 +205,22 @@ export function ContentGrid({
     });
   }
 
+  if (showTweets) {
+    tweets.forEach((tweet) => {
+      allContent.push({
+        type: "tweet",
+        data: tweet,
+        date: tweet.publishedAt,
+      });
+    });
+  }
+
   if (showProjects) {
     projects.forEach((project) => {
       allContent.push({
         type: "project",
         data: project,
-        date: project.extractedAt,
+        date: project.publishedAt || project.extractedAt,
       });
     });
   }
@@ -219,26 +234,44 @@ export function ContentGrid({
     return <EmptyState />;
   }
 
+  // Use masonry layout for tweets and mixed content
+  const breakpointColumns = {
+    default: 3,
+    1100: 2,
+    700: 1,
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <Masonry
+      breakpointCols={breakpointColumns}
+      className="flex -ml-6 w-auto"
+      columnClassName="pl-6 bg-clip-padding"
+    >
       {allContent.map((item) => {
         if (item.type === "project") {
           return (
-            <ProjectCard
-              key={`project-${(item.data as Doc<"projects">)._id}`}
-              project={item.data as Doc<"projects">}
-            />
+            <div key={`project-${(item.data as Doc<"projects">)._id}`} className="mb-6">
+              <ProjectCard project={item.data as Doc<"projects">} />
+            </div>
+          );
+        }
+        if (item.type === "tweet") {
+          return (
+            <div key={`tweet-${(item.data as Doc<"tweets">)._id}`} className="mb-6">
+              <TweetCard tweet={item.data as Doc<"tweets">} />
+            </div>
           );
         }
         return (
-          <ContentCard
-            key={`${item.type}-${item.data._id}`}
-            type={item.type}
-            data={item.data as Doc<"videos"> | Doc<"articles">}
-          />
+          <div key={`${item.type}-${item.data._id}`} className="mb-6">
+            <ContentCard
+              type={item.type}
+              data={item.data as Doc<"videos"> | Doc<"articles">}
+            />
+          </div>
         );
       })}
-    </div>
+    </Masonry>
   );
 }
 

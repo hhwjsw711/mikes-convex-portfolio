@@ -6,21 +6,23 @@ import { FilterBar } from "../components/FilterBar";
 import { VideoStatsCards } from "../components/VideoStatsCards";
 import { useState } from "react";
 
-export type ContentType = "all" | "videos" | "articles" | "projects";
+export type ContentType = "all" | "videos" | "articles" | "tweets" | "projects";
 
 export function Home() {
   const [filter, setFilter] = useState<ContentType>("all");
   const videos = useQuery(api.videos.list);
   const articles = useQuery(api.articles.list);
+  const tweets = useQuery(api.tweets.list);
   const projects = useQuery(api.projects.list);
   const videoStats = useQuery(api.videos.stats);
 
   const isLoading =
-    videos === undefined || articles === undefined || projects === undefined;
+    videos === undefined || articles === undefined || tweets === undefined || projects === undefined;
 
   const counts = {
     videos: videos?.length ?? 0,
     articles: articles?.length ?? 0,
+    tweets: tweets?.length ?? 0,
     projects: projects?.length ?? 0,
   };
 
@@ -40,6 +42,7 @@ export function Home() {
         <ContentGrid
           videos={videos ?? []}
           articles={articles ?? []}
+          tweets={tweets ?? []}
           projects={projects ?? []}
           filter={filter}
           isLoading={isLoading}

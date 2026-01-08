@@ -1,11 +1,18 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { getVisibleArticles, upsertArticle } from "./model/articles";
+import { getVisibleArticles, upsertArticle, getArticleBySlug } from "./model/articles";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
     return await getVisibleArticles(ctx);
+  },
+});
+
+export const getBySlug = internalQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, { slug }) => {
+    return await getArticleBySlug(ctx, slug);
   },
 });
 

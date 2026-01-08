@@ -19,11 +19,14 @@ import type * as migrations_backfillVideoAggregates from "../migrations/backfill
 import type * as migrations_migrateIsHiddenToIsMikes from "../migrations/migrateIsHiddenToIsMikes.js";
 import type * as model_articles from "../model/articles.js";
 import type * as model_projects from "../model/projects.js";
+import type * as model_tweets from "../model/tweets.js";
 import type * as model_videos from "../model/videos.js";
 import type * as projects from "../projects.js";
 import type * as stack from "../stack.js";
+import type * as tweets from "../tweets.js";
 import type * as videoAggregates from "../videoAggregates.js";
 import type * as videos from "../videos.js";
+import type * as x from "../x.js";
 import type * as youtube from "../youtube.js";
 
 import type {
@@ -44,11 +47,14 @@ declare const fullApi: ApiFromModules<{
   "migrations/migrateIsHiddenToIsMikes": typeof migrations_migrateIsHiddenToIsMikes;
   "model/articles": typeof model_articles;
   "model/projects": typeof model_projects;
+  "model/tweets": typeof model_tweets;
   "model/videos": typeof model_videos;
   projects: typeof projects;
   stack: typeof stack;
+  tweets: typeof tweets;
   videoAggregates: typeof videoAggregates;
   videos: typeof videos;
+  x: typeof x;
   youtube: typeof youtube;
 }>;
 

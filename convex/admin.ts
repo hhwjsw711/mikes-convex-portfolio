@@ -34,6 +34,12 @@ export const getAllContent = query({
         .withIndex("by_publishedAt")
         .order("desc")
         .collect(),
+      // Sort tweets by publishedAt descending (newest first)
+      tweets: await ctx.db
+        .query("tweets")
+        .withIndex("by_publishedAt")
+        .order("desc")
+        .collect(),
       // Projects don't have publishedAt, so use default _creationTime
       projects: await ctx.db.query("projects").order("desc").collect(),
     };
@@ -59,6 +65,17 @@ export const triggerStackRefresh = mutation({
     // Schedule the refresh action
     await ctx.scheduler.runAfter(0, internal.stack.refresh, {});
     return { success: true, message: "Stack refresh triggered" };
+  },
+});
+
+// Trigger X refresh (admin only)
+export const triggerXRefresh = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuth(ctx);
+    // Schedule the refresh action
+    await ctx.scheduler.runAfter(0, internal.x.refresh, {});
+    return { success: true, message: "X refresh triggered" };
   },
 });
 

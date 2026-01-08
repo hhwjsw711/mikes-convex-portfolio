@@ -148,12 +148,33 @@ export const refresh = internalAction({
               article.title = decodeHtmlEntities(ogTitleMatch[1]);
             }
 
-            // Try to extract publish date
+            // Try to extract publish date from title attribute (format: "November 12, 2024 at 0:11 AM" or "December 6, 2024 at 18:12 PM")
             const dateMatch = articleHtml.match(
-              /<time[^>]*datetime="([^"]+)"/i
+              /title="([A-Z][a-z]+ \d{1,2}, \d{4}(?:\s+at\s+\d{1,2}:\d{2}\s*[AP]M)?)"/i
             );
             if (dateMatch) {
-              article.publishedAt = dateMatch[1];
+              try {
+                // Parse date format like "November 12, 2024" or "November 12, 2024 at 0:11 AM"
+                let dateStr = dateMatch[1];
+                // Remove " at HH:MM AM/PM" part and just use the date
+                dateStr = dateStr.replace(/\s+at\s+\d{1,2}:\d{2}\s*[AP]M/i, "");
+                const parsedDate = new Date(dateStr);
+                if (!isNaN(parsedDate.getTime())) {
+                  article.publishedAt = parsedDate.toISOString();
+                }
+              } catch {
+                // Keep the default if parsing fails
+              }
+            }
+
+            // Fallback: try time element with datetime
+            if (!dateMatch) {
+              const timeMatch = articleHtml.match(
+                /<time[^>]*datetime="([^"]+)"/i
+              );
+              if (timeMatch) {
+                article.publishedAt = timeMatch[1];
+              }
             }
 
             // Extract text content from HTML for LLM analysis
@@ -193,6 +214,7 @@ export const refresh = internalAction({
                   sourceType: "article",
                   sourceId: article.slug,
                   extractedAt: new Date().toISOString(),
+                  publishedAt: article.publishedAt,
                 });
               }
             } else {
@@ -213,6 +235,7 @@ export const refresh = internalAction({
                   sourceType: "article",
                   sourceId: article.slug,
                   extractedAt: new Date().toISOString(),
+                  publishedAt: article.publishedAt,
                 });
               }
             }

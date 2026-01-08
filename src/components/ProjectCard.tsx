@@ -5,7 +5,8 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const formattedDate = new Date(project.extractedAt).toLocaleDateString(
+  const publishedDate = project.publishedAt || project.extractedAt;
+  const formattedDate = new Date(publishedDate).toLocaleDateString(
     "en-US",
     {
       year: "numeric",
@@ -15,7 +16,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   );
 
   return (
-    <div className="group flex flex-col overflow-hidden rounded-lg border border-gray-800 bg-[#111] transition-all hover:border-accent-500/50 hover:shadow-lg hover:shadow-accent-500/10">
+    <div className="group flex flex-col overflow-hidden rounded-lg border border-purple-800/50 bg-[#111] transition-all hover:border-purple-500/70 hover:shadow-lg hover:shadow-purple-500/10">
       {project.thumbnailUrl && (
         <div className="relative aspect-video overflow-hidden">
           <img
@@ -85,8 +86,24 @@ export function ProjectCard({ project }: ProjectCardProps) {
           )}
         </div>
         <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
-          <span className="capitalize">From {project.sourceType}</span>
-          <span>{formattedDate}</span>
+          <div className="flex items-center gap-1.5">
+            {project.sourceType === "video" ? (
+              <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            )}
+            <span className="capitalize">From {project.sourceType}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>{formattedDate}</span>
+          </div>
         </div>
       </div>
     </div>

@@ -27,4 +27,12 @@ crons.hourly(
   {}
 );
 
+// Refresh X (Twitter) posts every 24 hours
+crons.daily(
+  "refreshX",
+  { hourUTC: 6, minuteUTC: 0 }, // 6 AM UTC daily
+  internal.x.refresh,
+  {}
+);
+
 export default crons;

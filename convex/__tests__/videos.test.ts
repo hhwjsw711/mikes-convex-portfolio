@@ -98,3 +98,60 @@ describe("aggregate inclusion rules", () => {
     expect(shouldIncludeInAggregates("undecided")).toBe(false);
   });
 });
+
+describe("video sorting", () => {
+  // Test the sorting logic used in getVisibleVideos
+  interface VideoWithDate {
+    title: string;
+    publishedAt: string;
+  }
+
+  const sortByPublishedAtDesc = (videos: VideoWithDate[]): VideoWithDate[] => {
+    return [...videos].sort((a, b) =>
+      new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+  };
+
+  it("sorts videos by publishedAt descending (newest first)", () => {
+    const videos: VideoWithDate[] = [
+      { title: "Old Video", publishedAt: "2024-01-01T00:00:00Z" },
+      { title: "New Video", publishedAt: "2025-12-01T00:00:00Z" },
+      { title: "Middle Video", publishedAt: "2025-06-15T00:00:00Z" },
+    ];
+
+    const sorted = sortByPublishedAtDesc(videos);
+
+    expect(sorted[0].title).toBe("New Video");
+    expect(sorted[1].title).toBe("Middle Video");
+    expect(sorted[2].title).toBe("Old Video");
+  });
+
+  it("handles videos with same date", () => {
+    const videos: VideoWithDate[] = [
+      { title: "Video A", publishedAt: "2025-06-15T10:00:00Z" },
+      { title: "Video B", publishedAt: "2025-06-15T10:00:00Z" },
+    ];
+
+    const sorted = sortByPublishedAtDesc(videos);
+
+    // Both videos should be present (stable sort)
+    expect(sorted).toHaveLength(2);
+    expect(sorted.map(v => v.title)).toContain("Video A");
+    expect(sorted.map(v => v.title)).toContain("Video B");
+  });
+
+  it("handles empty array", () => {
+    const sorted = sortByPublishedAtDesc([]);
+    expect(sorted).toHaveLength(0);
+  });
+
+  it("handles single video", () => {
+    const videos: VideoWithDate[] = [
+      { title: "Only Video", publishedAt: "2025-01-01T00:00:00Z" },
+    ];
+
+    const sorted = sortByPublishedAtDesc(videos);
+    expect(sorted).toHaveLength(1);
+    expect(sorted[0].title).toBe("Only Video");
+  });
+});
