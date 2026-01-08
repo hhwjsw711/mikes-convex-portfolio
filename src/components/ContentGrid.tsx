@@ -51,6 +51,12 @@ export function ContentGrid({
 }: ContentGridProps) {
   const [videoTab, setVideoTab] = useState<VideoTab>("longform");
 
+  // Query for sub-category stats using aggregates (must be called before any early returns)
+  const subCategoryStats = useQuery(
+    api.videos.statsByType,
+    filter === "videos" ? { videoType: videoTab } : "skip"
+  );
+
   const handleHideContent = (id: Id<"videos"> | Id<"articles">, type: "video" | "article") => {
     if (type === "video") {
       onHideVideo?.(id as Id<"videos">);
@@ -62,9 +68,6 @@ export function ContentGrid({
   if (isLoading) {
     return <LoadingState />;
   }
-
-  // Query for sub-category stats using aggregates
-  const subCategoryStats = useQuery(api.videos.statsByType, { videoType: videoTab });
 
   // When filtering by videos only, show tabbed view
   if (filter === "videos") {

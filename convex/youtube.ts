@@ -3,6 +3,7 @@
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { extractProjectLinks } from "./model/projects";
+import { extractProjectsWithLLM } from "./lib/extractProjects";
 
 interface YouTubeChannelResponse {
   items: Array<{
@@ -151,19 +152,41 @@ export const refreshAll = internalAction({
           duration: video.contentDetails?.duration,
         });
 
-        // Extract and store projects from video description
-        const projectLinks = extractProjectLinks(video.snippet.description);
-        if (projectLinks.sourceUrl || projectLinks.demoUrl) {
-          await ctx.runMutation(internal.projects.upsert, {
-            name: projectLinks.projectName || video.snippet.title,
-            description: video.snippet.description.slice(0, 200),
-            sourceUrl: projectLinks.sourceUrl,
-            demoUrl: projectLinks.demoUrl,
-            thumbnailUrl: thumbnail,
-            sourceType: "video",
-            sourceId: video.id,
-            extractedAt: new Date().toISOString(),
-          });
+        // Extract and store projects from video description using LLM
+        const llmProjects = await extractProjectsWithLLM(
+          video.snippet.description,
+          video.snippet.title
+        );
+
+        if (llmProjects.length > 0) {
+          // Use LLM-extracted projects
+          for (const project of llmProjects) {
+            await ctx.runMutation(internal.projects.upsert, {
+              name: project.name,
+              description: project.description.slice(0, 200),
+              sourceUrl: project.sourceUrl,
+              demoUrl: project.demoUrl,
+              thumbnailUrl: thumbnail,
+              sourceType: "video",
+              sourceId: video.id,
+              extractedAt: new Date().toISOString(),
+            });
+          }
+        } else {
+          // Fallback to regex extraction if LLM returns nothing
+          const projectLinks = extractProjectLinks(video.snippet.description);
+          if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+            await ctx.runMutation(internal.projects.upsert, {
+              name: projectLinks.projectName || video.snippet.title,
+              description: video.snippet.description.slice(0, 200),
+              sourceUrl: projectLinks.sourceUrl,
+              demoUrl: projectLinks.demoUrl,
+              thumbnailUrl: thumbnail,
+              sourceType: "video",
+              sourceId: video.id,
+              extractedAt: new Date().toISOString(),
+            });
+          }
         }
 
         processedCount++;
@@ -260,19 +283,41 @@ export const refreshLatest = internalAction({
           duration: video.contentDetails?.duration,
         });
 
-        // Extract and store projects from video description
-        const projectLinks = extractProjectLinks(video.snippet.description);
-        if (projectLinks.sourceUrl || projectLinks.demoUrl) {
-          await ctx.runMutation(internal.projects.upsert, {
-            name: projectLinks.projectName || video.snippet.title,
-            description: video.snippet.description.slice(0, 200),
-            sourceUrl: projectLinks.sourceUrl,
-            demoUrl: projectLinks.demoUrl,
-            thumbnailUrl: thumbnail,
-            sourceType: "video",
-            sourceId: video.id,
-            extractedAt: new Date().toISOString(),
-          });
+        // Extract and store projects from video description using LLM
+        const llmProjects = await extractProjectsWithLLM(
+          video.snippet.description,
+          video.snippet.title
+        );
+
+        if (llmProjects.length > 0) {
+          // Use LLM-extracted projects
+          for (const project of llmProjects) {
+            await ctx.runMutation(internal.projects.upsert, {
+              name: project.name,
+              description: project.description.slice(0, 200),
+              sourceUrl: project.sourceUrl,
+              demoUrl: project.demoUrl,
+              thumbnailUrl: thumbnail,
+              sourceType: "video",
+              sourceId: video.id,
+              extractedAt: new Date().toISOString(),
+            });
+          }
+        } else {
+          // Fallback to regex extraction if LLM returns nothing
+          const projectLinks = extractProjectLinks(video.snippet.description);
+          if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+            await ctx.runMutation(internal.projects.upsert, {
+              name: projectLinks.projectName || video.snippet.title,
+              description: video.snippet.description.slice(0, 200),
+              sourceUrl: projectLinks.sourceUrl,
+              demoUrl: projectLinks.demoUrl,
+              thumbnailUrl: thumbnail,
+              sourceType: "video",
+              sourceId: video.id,
+              extractedAt: new Date().toISOString(),
+            });
+          }
         }
 
         processedCount++;

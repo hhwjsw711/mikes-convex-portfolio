@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as articles from "../articles.js";
 import type * as crons from "../crons.js";
+import type * as lib_extractProjects from "../lib/extractProjects.js";
 import type * as lib_videoUtils from "../lib/videoUtils.js";
 import type * as migrations_backfillVideoAggregates from "../migrations/backfillVideoAggregates.js";
 import type * as model_articles from "../model/articles.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   articles: typeof articles;
   crons: typeof crons;
+  "lib/extractProjects": typeof lib_extractProjects;
   "lib/videoUtils": typeof lib_videoUtils;
   "migrations/backfillVideoAggregates": typeof migrations_backfillVideoAggregates;
   "model/articles": typeof model_articles;

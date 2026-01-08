@@ -18,6 +18,20 @@ export async function getProjectBySourceId(ctx: QueryCtx, sourceId: string) {
     .first();
 }
 
+export async function getProjectBySourceUrl(ctx: QueryCtx, sourceUrl: string) {
+  return await ctx.db
+    .query("projects")
+    .withIndex("by_sourceUrl", (q) => q.eq("sourceUrl", sourceUrl))
+    .first();
+}
+
+export async function getProjectByName(ctx: QueryCtx, name: string) {
+  return await ctx.db
+    .query("projects")
+    .withIndex("by_name", (q) => q.eq("name", name))
+    .first();
+}
+
 export async function getAllProjects(ctx: QueryCtx) {
   return await ctx.db.query("projects").order("desc").collect();
 }
@@ -27,12 +41,32 @@ export async function getVisibleProjects(ctx: QueryCtx) {
   return projects.filter((p) => !p.isHidden);
 }
 
+/**
+ * Upsert a project, checking for duplicates by sourceUrl or name
+ * Priority: sourceUrl match > name match > create new
+ */
 export async function upsertProject(ctx: MutationCtx, projectData: ProjectData) {
-  const existing = await getProjectBySourceId(ctx, projectData.sourceId);
-  if (existing) {
-    await ctx.db.patch(existing._id, projectData);
-    return existing._id;
+  // First, check if a project with the same sourceUrl already exists
+  if (projectData.sourceUrl) {
+    const existingByUrl = await getProjectBySourceUrl(ctx, projectData.sourceUrl);
+    if (existingByUrl) {
+      // Update existing project but preserve isHidden status
+      const { ...dataWithoutHidden } = projectData;
+      await ctx.db.patch(existingByUrl._id, dataWithoutHidden);
+      return existingByUrl._id;
+    }
   }
+
+  // Check if a project with the same name already exists
+  const existingByName = await getProjectByName(ctx, projectData.name);
+  if (existingByName) {
+    // Update existing project but preserve isHidden status
+    const { ...dataWithoutHidden } = projectData;
+    await ctx.db.patch(existingByName._id, dataWithoutHidden);
+    return existingByName._id;
+  }
+
+  // No duplicate found, create new project
   return await ctx.db.insert("projects", projectData);
 }
 

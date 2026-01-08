@@ -42,5 +42,6 @@ export default defineSchema({
   })
     .index("by_name", ["name"])
     .index("by_sourceType", ["sourceType"])
-    .index("by_sourceId", ["sourceId"]),
+    .index("by_sourceId", ["sourceId"])
+    .index("by_sourceUrl", ["sourceUrl"]),
 });

@@ -3,6 +3,7 @@
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { extractProjectLinks } from "./model/projects";
+import { extractProjectsWithLLM } from "./lib/extractProjects";
 
 interface ParsedArticle {
   slug: string;
@@ -154,19 +155,49 @@ export const refresh = internalAction({
               article.publishedAt = dateMatch[1];
             }
 
-            // Extract projects from article content
-            const projectLinks = extractProjectLinks(articleHtml);
-            if (projectLinks.sourceUrl || projectLinks.demoUrl) {
-              await ctx.runMutation(internal.projects.upsert, {
-                name: projectLinks.projectName || article.title,
-                description: article.description.slice(0, 200),
-                sourceUrl: projectLinks.sourceUrl,
-                demoUrl: projectLinks.demoUrl,
-                thumbnailUrl: article.thumbnailUrl,
-                sourceType: "article",
-                sourceId: article.slug,
-                extractedAt: new Date().toISOString(),
-              });
+            // Extract text content from HTML for LLM analysis
+            const textContent = articleHtml
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+              .replace(/<[^>]+>/g, " ")
+              .replace(/\s+/g, " ")
+              .trim();
+
+            // Extract projects from article content using LLM
+            const llmProjects = await extractProjectsWithLLM(
+              textContent,
+              article.title
+            );
+
+            if (llmProjects.length > 0) {
+              // Use LLM-extracted projects
+              for (const project of llmProjects) {
+                await ctx.runMutation(internal.projects.upsert, {
+                  name: project.name,
+                  description: project.description.slice(0, 200),
+                  sourceUrl: project.sourceUrl,
+                  demoUrl: project.demoUrl,
+                  thumbnailUrl: article.thumbnailUrl,
+                  sourceType: "article",
+                  sourceId: article.slug,
+                  extractedAt: new Date().toISOString(),
+                });
+              }
+            } else {
+              // Fallback to regex extraction if LLM returns nothing
+              const projectLinks = extractProjectLinks(articleHtml);
+              if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+                await ctx.runMutation(internal.projects.upsert, {
+                  name: projectLinks.projectName || article.title,
+                  description: article.description.slice(0, 200),
+                  sourceUrl: projectLinks.sourceUrl,
+                  demoUrl: projectLinks.demoUrl,
+                  thumbnailUrl: article.thumbnailUrl,
+                  sourceType: "article",
+                  sourceId: article.slug,
+                  extractedAt: new Date().toISOString(),
+                });
+              }
             }
           }
         } catch (articleError) {

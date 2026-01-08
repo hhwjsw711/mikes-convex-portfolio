@@ -41,3 +41,18 @@ export const add = mutation({
     return await upsertProject(ctx, args);
   },
 });
+
+// Clear all projects
+export const clearAll = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const projects = await ctx.db.query("projects").collect();
+    let count = 0;
+    for (const project of projects) {
+      await ctx.db.delete(project._id);
+      count++;
+    }
+    console.log(`Deleted ${count} projects`);
+    return { deleted: count };
+  },
+});
