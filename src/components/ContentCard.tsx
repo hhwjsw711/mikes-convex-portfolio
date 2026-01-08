@@ -1,33 +1,12 @@
 import type { Doc } from "../../convex/_generated/dataModel";
-import type { Id } from "../../convex/_generated/dataModel";
 
 interface ContentCardProps {
   type: "video" | "article";
   data: Doc<"videos"> | Doc<"articles">;
   compact?: boolean;
-  isAdmin?: boolean;
-  onHide?: (id: Id<"videos"> | Id<"articles">, type: "video" | "article") => void;
 }
 
-function HideButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }}
-      className="absolute right-2 top-2 rounded-full bg-black/70 p-1.5 text-gray-400 opacity-0 transition-all hover:bg-red-600 hover:text-white group-hover:opacity-100"
-      title="Hide this item"
-    >
-      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-      </svg>
-    </button>
-  );
-}
-
-export function ContentCard({ type, data, compact = false, isAdmin = false, onHide }: ContentCardProps) {
+export function ContentCard({ type, data, compact = false }: ContentCardProps) {
   const isVideo = type === "video";
   const video = isVideo ? (data as Doc<"videos">) : null;
   const article = !isVideo ? (data as Doc<"articles">) : null;
@@ -68,9 +47,6 @@ export function ContentCard({ type, data, compact = false, isAdmin = false, onHi
                 Short
               </span>
             </div>
-            {isAdmin && onHide && (
-              <HideButton onClick={() => onHide(data._id as Id<"videos">, type)} />
-            )}
           </div>
         )}
         <div className="p-2">
@@ -107,9 +83,6 @@ export function ContentCard({ type, data, compact = false, isAdmin = false, onHi
               {isVideo ? "Video" : "Article"}
             </span>
           </div>
-          {isAdmin && onHide && (
-            <HideButton onClick={() => onHide(data._id as Id<"videos"> | Id<"articles">, type)} />
-          )}
         </div>
       )}
       <div className="flex flex-1 flex-col p-4">

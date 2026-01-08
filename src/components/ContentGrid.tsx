@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { ContentType } from "../pages/Home";
-import type { Doc, Id } from "../../convex/_generated/dataModel";
+import type { Doc } from "../../convex/_generated/dataModel";
 import { ContentCard } from "./ContentCard";
 import { ProjectCard } from "./ProjectCard";
 import { LoadingState } from "./LoadingState";
@@ -15,10 +15,6 @@ interface ContentGridProps {
   projects: Doc<"projects">[];
   filter: ContentType;
   isLoading: boolean;
-  isAdmin?: boolean;
-  onHideVideo?: (id: Id<"videos">) => void;
-  onHideArticle?: (id: Id<"articles">) => void;
-  onHideProject?: (id: Id<"projects">) => void;
 }
 
 // Parse ISO 8601 duration (e.g., "PT1M30S") to seconds
@@ -44,10 +40,6 @@ export function ContentGrid({
   projects,
   filter,
   isLoading,
-  isAdmin = false,
-  onHideVideo,
-  onHideArticle,
-  onHideProject,
 }: ContentGridProps) {
   const [videoTab, setVideoTab] = useState<VideoTab>("longform");
 
@@ -56,14 +48,6 @@ export function ContentGrid({
     api.videos.statsByType,
     filter === "videos" ? { videoType: videoTab } : "skip"
   );
-
-  const handleHideContent = (id: Id<"videos"> | Id<"articles">, type: "video" | "article") => {
-    if (type === "video") {
-      onHideVideo?.(id as Id<"videos">);
-    } else {
-      onHideArticle?.(id as Id<"articles">);
-    }
-  };
 
   if (isLoading) {
     return <LoadingState />;
@@ -157,8 +141,6 @@ export function ContentGrid({
                   key={`video-${video._id}`}
                   type="video"
                   data={video}
-                  isAdmin={isAdmin}
-                  onHide={handleHideContent}
                 />
               ))
             ) : (
@@ -178,8 +160,6 @@ export function ContentGrid({
                   type="video"
                   data={video}
                   compact
-                  isAdmin={isAdmin}
-                  onHide={handleHideContent}
                 />
               ))
             ) : (
@@ -247,8 +227,6 @@ export function ContentGrid({
             <ProjectCard
               key={`project-${(item.data as Doc<"projects">)._id}`}
               project={item.data as Doc<"projects">}
-              isAdmin={isAdmin}
-              onHide={onHideProject}
             />
           );
         }
@@ -257,8 +235,6 @@ export function ContentGrid({
             key={`${item.type}-${item.data._id}`}
             type={item.type}
             data={item.data as Doc<"videos"> | Doc<"articles">}
-            isAdmin={isAdmin}
-            onHide={handleHideContent}
           />
         );
       })}

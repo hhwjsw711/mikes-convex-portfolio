@@ -33,14 +33,19 @@ export async function getAllVideos(ctx: QueryCtx) {
 }
 
 export async function getVisibleVideos(ctx: QueryCtx) {
-  const videos = await getAllVideos(ctx);
-  return videos.filter((v) => !v.isHidden);
+  // Only videos marked as "mine" are visible
+  return await ctx.db
+    .query("videos")
+    .withIndex("by_isMikes", (q) => q.eq("isMikes", "mine"))
+    .order("desc")
+    .collect();
 }
 
 export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {
   const existing = await getVideoByYoutubeId(ctx, videoData.youtubeId);
   if (existing) {
     // Update existing video and sync aggregates
+    // Note: We preserve the existing isMikes status
     await ctx.db.patch(existing._id, videoData);
     const newDoc = await ctx.db.get(existing._id);
     if (newDoc) {
@@ -48,8 +53,11 @@ export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {
     }
     return existing._id;
   }
-  // Insert new video and sync aggregates
-  const id = await ctx.db.insert("videos", videoData);
+  // Insert new video with isMikes: "undecided" and sync aggregates
+  const id = await ctx.db.insert("videos", {
+    ...videoData,
+    isMikes: "undecided",
+  });
   const newDoc = await ctx.db.get(id);
   if (newDoc) {
     await insertVideoAggregates(ctx, newDoc);

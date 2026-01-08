@@ -4,6 +4,7 @@ import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { extractProjectLinks } from "./model/projects";
 import { extractProjectsWithLLM } from "./lib/extractProjects";
+import { getProjectThumbnail } from "./lib/githubReadme";
 
 interface ParsedArticle {
   slug: string;
@@ -164,6 +165,7 @@ export const refresh = internalAction({
               .trim();
 
             // Extract projects from article content using LLM
+            // Stack articles are always "mine" since they come from the mike-cann endpoint
             const llmProjects = await extractProjectsWithLLM(
               textContent,
               article.title
@@ -172,12 +174,22 @@ export const refresh = internalAction({
             if (llmProjects.length > 0) {
               // Use LLM-extracted projects
               for (const project of llmProjects) {
+                // Skip projects without source or demo URL
+                if (!project.sourceUrl && !project.demoUrl) {
+                  console.log(`Skipping project "${project.name}" - no source or demo URL`);
+                  continue;
+                }
+                // Try to get thumbnail from GitHub README, fall back to article thumbnail
+                const projectThumbnail = await getProjectThumbnail(
+                  project.sourceUrl,
+                  article.thumbnailUrl
+                );
                 await ctx.runMutation(internal.projects.upsert, {
                   name: project.name,
                   description: project.description.slice(0, 200),
                   sourceUrl: project.sourceUrl,
                   demoUrl: project.demoUrl,
-                  thumbnailUrl: article.thumbnailUrl,
+                  thumbnailUrl: projectThumbnail,
                   sourceType: "article",
                   sourceId: article.slug,
                   extractedAt: new Date().toISOString(),
@@ -187,12 +199,17 @@ export const refresh = internalAction({
               // Fallback to regex extraction if LLM returns nothing
               const projectLinks = extractProjectLinks(articleHtml);
               if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+                // Try to get thumbnail from GitHub README, fall back to article thumbnail
+                const projectThumbnail = await getProjectThumbnail(
+                  projectLinks.sourceUrl,
+                  article.thumbnailUrl
+                );
                 await ctx.runMutation(internal.projects.upsert, {
                   name: projectLinks.projectName || article.title,
                   description: article.description.slice(0, 200),
                   sourceUrl: projectLinks.sourceUrl,
                   demoUrl: projectLinks.demoUrl,
-                  thumbnailUrl: article.thumbnailUrl,
+                  thumbnailUrl: projectThumbnail,
                   sourceType: "article",
                   sourceId: article.slug,
                   extractedAt: new Date().toISOString(),

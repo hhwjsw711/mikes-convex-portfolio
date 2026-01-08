@@ -46,13 +46,14 @@ This is a content aggregation app built with **React + Vite** (frontend) and **C
    - `videos.ts`, `articles.ts` - Domain-specific model helpers
 
 4. **API Layer** (`convex/videos.ts`, `convex/articles.ts`, `convex/projects.ts`):
-   - Public queries: `list` (filters hidden items)
+   - Public queries: `list` (filters to show only visible items)
    - Internal mutations: `add`, `upsert` (used by refresh actions)
 
 5. **Admin** (`convex/admin.ts`):
    - Protected by email check (`requireAuth` helper)
-   - `setVideoHidden`, `setArticleHidden`, `setProjectHidden` - toggle visibility
-   - `getAllContent` - returns all items including hidden
+   - `setVideoIsMikes` - set video ownership status ("mine" or "notMine")
+   - `getAllContent` - returns all items for admin review
+   - `clearAllProjects` - delete all projects
    - `triggerYouTubeRefresh`, `triggerStackRefresh` - manual refresh
 
 ### Frontend Structure
@@ -71,11 +72,13 @@ This is a content aggregation app built with **React + Vite** (frontend) and **C
 ### Database Schema
 
 Three tables in `convex/schema.ts`:
-- `videos` - indexed by `youtubeId` and `publishedAt`
-- `articles` - indexed by `slug` and `publishedAt`
-- `projects` - indexed by `name`, `sourceType`, and `sourceId`
-
-All tables have optional `isHidden` field for admin visibility control.
+- `videos` - indexed by `youtubeId`, `publishedAt`, and `isMikes`
+  - `isMikes` field: "undecided" (new videos), "mine" (visible), or "notMine" (hidden)
+  - Only videos with `isMikes === "mine"` are shown publicly
+- `articles` - indexed by `slug` and `publishedAt` (always visible, from mike-cann endpoint)
+- `projects` - indexed by `name`, `sourceType`, `sourceId`, `sourceUrl`, and `normalizedName`
+  - Projects are only created from "mine" content, so always visible
+  - Uses fuzzy name matching via `normalizedName` to prevent duplicates
 
 ## Environment Variables
 

@@ -1,4 +1,5 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
+import { normalizeName, isSimilarName } from "../lib/normalization";
 
 export interface ProjectData {
   name: string;
@@ -32,42 +33,93 @@ export async function getProjectByName(ctx: QueryCtx, name: string) {
     .first();
 }
 
+export async function getProjectByNormalizedName(
+  ctx: QueryCtx,
+  normalizedName: string
+) {
+  return await ctx.db
+    .query("projects")
+    .withIndex("by_normalizedName", (q) => q.eq("normalizedName", normalizedName))
+    .first();
+}
+
+/**
+ * Find a similar project using fuzzy name matching.
+ * Returns the first project that matches above the similarity threshold.
+ */
+export async function findSimilarProject(ctx: QueryCtx, name: string) {
+  const allProjects = await getAllProjects(ctx);
+  for (const project of allProjects) {
+    if (isSimilarName(name, project.name)) {
+      return project;
+    }
+  }
+  return null;
+}
+
 export async function getAllProjects(ctx: QueryCtx) {
   return await ctx.db.query("projects").order("desc").collect();
 }
 
 export async function getVisibleProjects(ctx: QueryCtx) {
+  // Projects are created from "mine" content, but can be hidden by admin
   const projects = await getAllProjects(ctx);
   return projects.filter((p) => !p.isHidden);
 }
 
 /**
- * Upsert a project, checking for duplicates by sourceUrl or name
- * Priority: sourceUrl match > name match > create new
+ * Upsert a project, checking for duplicates using multiple strategies:
+ * 1. Exact sourceUrl match
+ * 2. Exact normalized name match
+ * 3. Fuzzy name matching (Levenshtein + word-based)
+ * 4. Create new if no match found
  */
 export async function upsertProject(ctx: MutationCtx, projectData: ProjectData) {
-  // First, check if a project with the same sourceUrl already exists
+  const normalized = normalizeName(projectData.name);
+
+  // 1. Check if a project with the same sourceUrl already exists
   if (projectData.sourceUrl) {
     const existingByUrl = await getProjectBySourceUrl(ctx, projectData.sourceUrl);
     if (existingByUrl) {
-      // Update existing project but preserve isHidden status
-      const { ...dataWithoutHidden } = projectData;
-      await ctx.db.patch(existingByUrl._id, dataWithoutHidden);
+      await ctx.db.patch(existingByUrl._id, {
+        ...projectData,
+        normalizedName: normalized,
+      });
       return existingByUrl._id;
     }
   }
 
-  // Check if a project with the same name already exists
-  const existingByName = await getProjectByName(ctx, projectData.name);
-  if (existingByName) {
-    // Update existing project but preserve isHidden status
-    const { ...dataWithoutHidden } = projectData;
-    await ctx.db.patch(existingByName._id, dataWithoutHidden);
-    return existingByName._id;
+  // 2. Check for exact normalized name match
+  const existingByNormalizedName = await getProjectByNormalizedName(
+    ctx,
+    normalized
+  );
+  if (existingByNormalizedName) {
+    await ctx.db.patch(existingByNormalizedName._id, {
+      ...projectData,
+      normalizedName: normalized,
+    });
+    return existingByNormalizedName._id;
   }
 
-  // No duplicate found, create new project
-  return await ctx.db.insert("projects", projectData);
+  // 3. Check for fuzzy name match (handles "EffectSim" vs "effect-sim", word reordering, etc.)
+  const similarProject = await findSimilarProject(ctx, projectData.name);
+  if (similarProject) {
+    console.log(
+      `Found similar project: "${projectData.name}" matches "${similarProject.name}"`
+    );
+    await ctx.db.patch(similarProject._id, {
+      ...projectData,
+      normalizedName: normalized,
+    });
+    return similarProject._id;
+  }
+
+  // 4. No duplicate found, create new project with normalized name
+  return await ctx.db.insert("projects", {
+    ...projectData,
+    normalizedName: normalized,
+  });
 }
 
 export async function deleteProjectsBySourceId(

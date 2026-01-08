@@ -1,38 +1,19 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Header } from "../components/Header";
 import { ContentGrid } from "../components/ContentGrid";
 import { FilterBar } from "../components/FilterBar";
 import { VideoStatsCards } from "../components/VideoStatsCards";
 import { useState } from "react";
-import { useAdmin } from "../hooks/useAdmin";
-import type { Id } from "../../convex/_generated/dataModel";
 
 export type ContentType = "all" | "videos" | "articles" | "projects";
 
 export function Home() {
   const [filter, setFilter] = useState<ContentType>("all");
-  const { isAdmin } = useAdmin();
   const videos = useQuery(api.videos.list);
   const articles = useQuery(api.articles.list);
   const projects = useQuery(api.projects.list);
   const videoStats = useQuery(api.videos.stats);
-
-  const hideVideo = useMutation(api.admin.setVideoHidden);
-  const hideArticle = useMutation(api.admin.setArticleHidden);
-  const hideProject = useMutation(api.admin.setProjectHidden);
-
-  const handleHideVideo = (id: Id<"videos">) => {
-    hideVideo({ id, isHidden: true });
-  };
-
-  const handleHideArticle = (id: Id<"articles">) => {
-    hideArticle({ id, isHidden: true });
-  };
-
-  const handleHideProject = (id: Id<"projects">) => {
-    hideProject({ id, isHidden: true });
-  };
 
   const isLoading =
     videos === undefined || articles === undefined || projects === undefined;
@@ -62,10 +43,6 @@ export function Home() {
           projects={projects ?? []}
           filter={filter}
           isLoading={isLoading}
-          isAdmin={isAdmin}
-          onHideVideo={handleHideVideo}
-          onHideArticle={handleHideArticle}
-          onHideProject={handleHideProject}
         />
       </main>
     </div>

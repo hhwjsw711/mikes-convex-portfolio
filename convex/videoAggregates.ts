@@ -43,9 +43,9 @@ export const commentsAggregate = new TableAggregate<{
   sumValue: (doc) => doc.commentCount ?? 0,
 });
 
-// Helper to check if video should be in aggregates (visible only)
+// Helper to check if video should be in aggregates (visible only = isMikes === "mine")
 function shouldIncludeInAggregates(doc: Doc<"videos">): boolean {
-  return !doc.isHidden;
+  return doc.isMikes === "mine";
 }
 
 // Helper to insert a video into all aggregates (only if visible)
@@ -79,21 +79,21 @@ export async function replaceVideoAggregates(
       commentsAggregate.replace(ctx, oldDoc, newDoc),
     ]);
   } else if (wasVisible && !isVisible) {
-    // Was visible, now hidden - delete from aggregates
+    // Was "mine", now not "mine" - delete from aggregates
     await Promise.all([
       viewsAggregate.delete(ctx, oldDoc),
       likesAggregate.delete(ctx, oldDoc),
       commentsAggregate.delete(ctx, oldDoc),
     ]);
   } else if (!wasVisible && isVisible) {
-    // Was hidden, now visible - insert into aggregates
+    // Was not "mine", now "mine" - insert into aggregates
     await Promise.all([
       viewsAggregate.insert(ctx, newDoc),
       likesAggregate.insert(ctx, newDoc),
       commentsAggregate.insert(ctx, newDoc),
     ]);
   }
-  // If both hidden, do nothing
+  // If both not "mine", do nothing
 }
 
 // Helper to delete a video from all aggregates

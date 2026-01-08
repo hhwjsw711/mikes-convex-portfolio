@@ -123,4 +123,114 @@ describe("extractProjectLinks", () => {
     expect(result.demoUrl).toBe("https://amazing-app.vercel.app");
     expect(result.projectName).toBe("amazing-app");
   });
+
+  describe("real video descriptions", () => {
+    it("extracts from EffectSim video description", () => {
+      // Real description from Mike's EffectSim video
+      const text = `EffectSim is a custom, Convex-powered control and simulation app built to design, preview, and run a Christmas light show before committing to the real-world installation. The video walks through the end-to-end engineering: selecting 12V individually addressable outdoor LEDs for long runs, validating power budgets and voltage drop limits, and scaling to 10x 20-meter strings (200 pixels each) driven by ESP32s.
+
+On the software side, it covers the control strategy and protocols used to hit real-time animation targets, including why a JSON API approach doesn't scale to 60 FPS and how switching to WLED's DDP over UDP enables low-latency pixel streaming. It also digs into deployment realities like Wi-Fi reliability across a yard, access point placement, and designing sequences that work for a fast-moving audience.
+
+Timestamps
+
+[00:00:00] EffectSim overview and goal
+[00:00:23] The real display setup: 10x 20m addressable strings + smart plugs
+[00:00:54] What the video covers: hardware, software, issues, fixes
+
+Resources
+
+- Effect Sim Source: https://github.com/mikecann/effect-sim
+- Vote for me: https://convex.link/YRsgHIj
+
+Hashtags
+
+#EffectSim #ESP32 #WLED #DDP #UDP #LEDs #AddressableLEDs #IoT #HomeAutomation #Convex #Firmware #Networking #WiFi #EmbeddedSystems #ChristmasLights`;
+
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/mikecann/effect-sim");
+      expect(result.projectName).toBe("effect-sim");
+      // convex.link is not a recognized demo URL pattern, so should be undefined
+      expect(result.demoUrl).toBeUndefined();
+    });
+
+    it("extracts first GitHub link when multiple are present", () => {
+      const text = `
+        Main project: https://github.com/mikecann/main-project
+        Related lib: https://github.com/other/lib
+        Another repo: https://github.com/other/another
+      `;
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/mikecann/main-project");
+      expect(result.projectName).toBe("main-project");
+    });
+
+    it("handles very long description (8000+ chars)", () => {
+      // Create a very long description with the important links at the end
+      const filler = "Lorem ipsum dolor sit amet. ".repeat(300); // ~8400 chars
+      const text = `${filler}
+        Source: https://github.com/user/long-project
+        Demo: https://long-project.vercel.app
+      `;
+
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/user/long-project");
+      expect(result.demoUrl).toBe("https://long-project.vercel.app");
+    });
+
+    it("extracts only demo URL when no source URL present", () => {
+      const text = `
+        Check out the live app at https://my-demo.vercel.app
+        Built with React and Convex!
+      `;
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBeUndefined();
+      expect(result.demoUrl).toBe("https://my-demo.vercel.app");
+    });
+
+    it("extracts GitHub Pages demo URL", () => {
+      const text = `
+        Source: https://github.com/user/docs-site
+        Documentation: https://user.github.io/docs-site/
+      `;
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/user/docs-site");
+      expect(result.demoUrl).toBe("https://user.github.io/docs-site/");
+    });
+
+    it("handles description with timestamps and chapters", () => {
+      const text = `
+        [0:00] Intro
+        [1:30] Getting started
+        [5:00] Advanced features
+        [10:00] Conclusion
+
+        Links:
+        GitHub: https://github.com/mikecann/timestamp-project
+        Try it: https://timestamp.netlify.app
+
+        Thanks for watching!
+      `;
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/mikecann/timestamp-project");
+      expect(result.demoUrl).toBe("https://timestamp.netlify.app");
+    });
+
+    it("handles URLs with query parameters", () => {
+      const text = `
+        Source: https://github.com/user/project
+        Demo: https://demo.vercel.app?ref=youtube
+      `;
+      const result = extractProjectLinks(text);
+
+      expect(result.sourceUrl).toBe("https://github.com/user/project");
+      // Note: query params may or may not be included depending on regex
+      expect(result.demoUrl).toContain("demo.vercel.app");
+    });
+  });
 });

@@ -12,7 +12,7 @@ import {
  *
  * npx convex run migrations/backfillVideoAggregates:backfill
  *
- * Note: This only includes visible (non-hidden) videos in the aggregates.
+ * Note: This only includes videos where isMikes === "mine" in the aggregates.
  */
 export const backfill = internalMutation({
   args: {},
@@ -22,7 +22,7 @@ export const backfill = internalMutation({
     let count = 0;
     let skipped = 0;
     for (const video of videos) {
-      if (video.isHidden) {
+      if (video.isMikes !== "mine") {
         skipped++;
         continue;
       }
@@ -31,7 +31,7 @@ export const backfill = internalMutation({
     }
 
     console.log(
-      `Backfilled aggregates for ${count} visible videos (skipped ${skipped} hidden)`
+      `Backfilled aggregates for ${count} "mine" videos (skipped ${skipped} not mine)`
     );
     return { videosProcessed: count, skipped };
   },

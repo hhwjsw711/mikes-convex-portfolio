@@ -1,12 +1,40 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import {
+  query,
+  mutation,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import { v } from "convex/values";
-import { getVisibleVideos, upsertVideo } from "./model/videos";
+import {
+  getVisibleVideos,
+  upsertVideo,
+  getVideoByYoutubeId,
+} from "./model/videos";
 import { getVideoStats, getVideoStatsByType } from "./videoAggregates";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
     return await getVisibleVideos(ctx);
+  },
+});
+
+// Internal query to get video by youtubeId (for use in actions)
+export const getByYoutubeId = internalQuery({
+  args: { youtubeId: v.string() },
+  handler: async (ctx, { youtubeId }) => {
+    return await getVideoByYoutubeId(ctx, youtubeId);
+  },
+});
+
+// Internal query to list all videos marked as "mine" (for batch processing)
+export const listMine = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("videos")
+      .withIndex("by_isMikes", (q) => q.eq("isMikes", "mine"))
+      .collect();
   },
 });
 

@@ -1,9 +1,11 @@
 "use node";
 
 import { action, internalAction } from "./_generated/server";
+import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { extractProjectLinks } from "./model/projects";
 import { extractProjectsWithLLM } from "./lib/extractProjects";
+import { getProjectThumbnail, fetchReadmeImage } from "./lib/githubReadme";
 
 interface YouTubeChannelResponse {
   items: Array<{
@@ -124,8 +126,9 @@ export const refreshAll = internalAction({
         }
       }
 
-      // Step 4: Store each video and extract projects
+      // Step 4: Store each video and conditionally extract projects
       let processedCount = 0;
+      let projectsExtracted = 0;
       for (const video of allVideos) {
         const thumbnail =
           video.snippet.thumbnails.high?.url ||
@@ -133,7 +136,12 @@ export const refreshAll = internalAction({
           video.snippet.thumbnails.default?.url ||
           "";
 
-        // Upsert the video
+        // Check if video already exists and get its isMikes status
+        const existingVideo = await ctx.runQuery(internal.videos.getByYoutubeId, {
+          youtubeId: video.id,
+        });
+
+        // Upsert the video (preserves isMikes status if existing)
         await ctx.runMutation(internal.videos.upsert, {
           youtubeId: video.id,
           title: video.snippet.title,
@@ -152,6 +160,14 @@ export const refreshAll = internalAction({
           duration: video.contentDetails?.duration,
         });
 
+        // Only extract projects if video is marked as "mine"
+        // New videos start as "undecided" and skip project extraction
+        const isMine = existingVideo?.isMikes === "mine";
+        if (!isMine) {
+          processedCount++;
+          continue;
+        }
+
         // Extract and store projects from video description using LLM
         const llmProjects = await extractProjectsWithLLM(
           video.snippet.description,
@@ -161,31 +177,48 @@ export const refreshAll = internalAction({
         if (llmProjects.length > 0) {
           // Use LLM-extracted projects
           for (const project of llmProjects) {
+            // Skip projects without source or demo URL
+            if (!project.sourceUrl && !project.demoUrl) {
+              console.log(`Skipping project "${project.name}" - no source or demo URL`);
+              continue;
+            }
+            // Try to get thumbnail from GitHub README, fall back to video thumbnail
+            const projectThumbnail = await getProjectThumbnail(
+              project.sourceUrl,
+              thumbnail
+            );
             await ctx.runMutation(internal.projects.upsert, {
               name: project.name,
               description: project.description.slice(0, 200),
               sourceUrl: project.sourceUrl,
               demoUrl: project.demoUrl,
-              thumbnailUrl: thumbnail,
+              thumbnailUrl: projectThumbnail,
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
             });
+            projectsExtracted++;
           }
         } else {
           // Fallback to regex extraction if LLM returns nothing
           const projectLinks = extractProjectLinks(video.snippet.description);
           if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+            // Try to get thumbnail from GitHub README, fall back to video thumbnail
+            const projectThumbnail = await getProjectThumbnail(
+              projectLinks.sourceUrl,
+              thumbnail
+            );
             await ctx.runMutation(internal.projects.upsert, {
               name: projectLinks.projectName || video.snippet.title,
               description: video.snippet.description.slice(0, 200),
               sourceUrl: projectLinks.sourceUrl,
               demoUrl: projectLinks.demoUrl,
-              thumbnailUrl: thumbnail,
+              thumbnailUrl: projectThumbnail,
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
             });
+            projectsExtracted++;
           }
         }
 
@@ -255,8 +288,9 @@ export const refreshLatest = internalAction({
       );
       const videosData: YouTubeVideosResponse = await videosResponse.json();
 
-      // Step 4: Store each video and extract projects
+      // Step 4: Store each video and conditionally extract projects
       let processedCount = 0;
+      let projectsExtracted = 0;
       for (const video of videosData.items) {
         const thumbnail =
           video.snippet.thumbnails.high?.url ||
@@ -264,7 +298,12 @@ export const refreshLatest = internalAction({
           video.snippet.thumbnails.default?.url ||
           "";
 
-        // Upsert the video
+        // Check if video already exists and get its isMikes status
+        const existingVideo = await ctx.runQuery(internal.videos.getByYoutubeId, {
+          youtubeId: video.id,
+        });
+
+        // Upsert the video (preserves isMikes status if existing)
         await ctx.runMutation(internal.videos.upsert, {
           youtubeId: video.id,
           title: video.snippet.title,
@@ -283,6 +322,14 @@ export const refreshLatest = internalAction({
           duration: video.contentDetails?.duration,
         });
 
+        // Only extract projects if video is marked as "mine"
+        // New videos start as "undecided" and skip project extraction
+        const isMine = existingVideo?.isMikes === "mine";
+        if (!isMine) {
+          processedCount++;
+          continue;
+        }
+
         // Extract and store projects from video description using LLM
         const llmProjects = await extractProjectsWithLLM(
           video.snippet.description,
@@ -292,38 +339,55 @@ export const refreshLatest = internalAction({
         if (llmProjects.length > 0) {
           // Use LLM-extracted projects
           for (const project of llmProjects) {
+            // Skip projects without source or demo URL
+            if (!project.sourceUrl && !project.demoUrl) {
+              console.log(`Skipping project "${project.name}" - no source or demo URL`);
+              continue;
+            }
+            // Try to get thumbnail from GitHub README, fall back to video thumbnail
+            const projectThumbnail = await getProjectThumbnail(
+              project.sourceUrl,
+              thumbnail
+            );
             await ctx.runMutation(internal.projects.upsert, {
               name: project.name,
               description: project.description.slice(0, 200),
               sourceUrl: project.sourceUrl,
               demoUrl: project.demoUrl,
-              thumbnailUrl: thumbnail,
+              thumbnailUrl: projectThumbnail,
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
             });
+            projectsExtracted++;
           }
         } else {
           // Fallback to regex extraction if LLM returns nothing
           const projectLinks = extractProjectLinks(video.snippet.description);
           if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+            // Try to get thumbnail from GitHub README, fall back to video thumbnail
+            const projectThumbnail = await getProjectThumbnail(
+              projectLinks.sourceUrl,
+              thumbnail
+            );
             await ctx.runMutation(internal.projects.upsert, {
               name: projectLinks.projectName || video.snippet.title,
               description: video.snippet.description.slice(0, 200),
               sourceUrl: projectLinks.sourceUrl,
               demoUrl: projectLinks.demoUrl,
-              thumbnailUrl: thumbnail,
+              thumbnailUrl: projectThumbnail,
               sourceType: "video",
               sourceId: video.id,
               extractedAt: new Date().toISOString(),
             });
+            projectsExtracted++;
           }
         }
 
         processedCount++;
       }
 
-      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos.`);
+      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos, extracted ${projectsExtracted} projects.`);
       return { success: true, videosProcessed: processedCount };
     } catch (error) {
       console.error("Error refreshing latest YouTube videos:", error);
@@ -340,5 +404,170 @@ export const manualRefresh = action({
   args: {},
   handler: async (ctx): Promise<{ success: boolean; videosProcessed?: number; error?: string }> => {
     return await ctx.runAction(internal.youtube.refreshAll, {});
+  },
+});
+
+// Extract projects for a single video (called when admin marks video as "mine")
+export const extractProjectsForVideo = internalAction({
+  args: { youtubeId: v.string() },
+  handler: async (ctx, { youtubeId }) => {
+    // Get the video from the database
+    const video = await ctx.runQuery(internal.videos.getByYoutubeId, { youtubeId });
+    if (!video) {
+      console.error(`Video not found: ${youtubeId}`);
+      return { success: false, error: "Video not found" };
+    }
+
+    const thumbnail = video.thumbnailUrl || "";
+
+    // Extract and store projects from video description using LLM
+    const llmProjects = await extractProjectsWithLLM(video.description, video.title);
+
+    let projectsExtracted = 0;
+
+    if (llmProjects.length > 0) {
+      // Use LLM-extracted projects
+      for (const project of llmProjects) {
+        // Skip projects without source or demo URL
+        if (!project.sourceUrl && !project.demoUrl) {
+          console.log(`Skipping project "${project.name}" - no source or demo URL`);
+          continue;
+        }
+        // Try to get thumbnail from GitHub README, fall back to video thumbnail
+        const projectThumbnail = await getProjectThumbnail(
+          project.sourceUrl,
+          thumbnail
+        );
+        await ctx.runMutation(internal.projects.upsert, {
+          name: project.name,
+          description: project.description.slice(0, 200),
+          sourceUrl: project.sourceUrl,
+          demoUrl: project.demoUrl,
+          thumbnailUrl: projectThumbnail,
+          sourceType: "video",
+          sourceId: video.youtubeId,
+          extractedAt: new Date().toISOString(),
+        });
+        projectsExtracted++;
+      }
+    } else {
+      // Fallback to regex extraction if LLM returns nothing
+      const projectLinks = extractProjectLinks(video.description);
+      if (projectLinks.sourceUrl || projectLinks.demoUrl) {
+        // Try to get thumbnail from GitHub README, fall back to video thumbnail
+        const projectThumbnail = await getProjectThumbnail(
+          projectLinks.sourceUrl,
+          thumbnail
+        );
+        await ctx.runMutation(internal.projects.upsert, {
+          name: projectLinks.projectName || video.title,
+          description: video.description.slice(0, 200),
+          sourceUrl: projectLinks.sourceUrl,
+          demoUrl: projectLinks.demoUrl,
+          thumbnailUrl: projectThumbnail,
+          sourceType: "video",
+          sourceId: video.youtubeId,
+          extractedAt: new Date().toISOString(),
+        });
+        projectsExtracted++;
+      }
+    }
+
+    console.log(
+      `Project extraction complete for video "${video.title}". Extracted ${projectsExtracted} projects.`
+    );
+    return { success: true, projectsExtracted };
+  },
+});
+
+// Batch extract projects from all "mine" videos
+// Use this to backfill projects after migration or if extraction was missed
+export const batchExtractProjects = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Get all videos marked as "mine"
+    const mineVideos = await ctx.runQuery(internal.videos.listMine);
+
+    console.log(`Found ${mineVideos.length} videos marked as "mine"`);
+
+    let totalProjects = 0;
+    let videosProcessed = 0;
+    let videosWithProjects = 0;
+
+    for (const video of mineVideos) {
+      const result = await ctx.runAction(internal.youtube.extractProjectsForVideo, {
+        youtubeId: video.youtubeId,
+      });
+
+      if (result.success && result.projectsExtracted && result.projectsExtracted > 0) {
+        totalProjects += result.projectsExtracted;
+        videosWithProjects++;
+      }
+      videosProcessed++;
+
+      // Log progress every 10 videos
+      if (videosProcessed % 10 === 0) {
+        console.log(`Processed ${videosProcessed}/${mineVideos.length} videos...`);
+      }
+    }
+
+    console.log(
+      `Batch extraction complete: ${videosProcessed} videos processed, ${videosWithProjects} had projects, ${totalProjects} total projects extracted`
+    );
+    return { videosProcessed, videosWithProjects, totalProjects };
+  },
+});
+
+// Manual trigger for batch extraction (admin use)
+export const manualBatchExtract = action({
+  args: {},
+  handler: async (ctx): Promise<{ videosProcessed: number; videosWithProjects: number; totalProjects: number }> => {
+    return await ctx.runAction(internal.youtube.batchExtractProjects, {});
+  },
+});
+
+// Re-parse thumbnails for all projects from GitHub READMEs
+export const reparseThumbnails = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const projects = await ctx.runQuery(internal.projects.listAll);
+
+    console.log(`Found ${projects.length} projects to re-parse thumbnails`);
+
+    let updated = 0;
+    let skipped = 0;
+    let noImage = 0;
+
+    for (const project of projects) {
+      // Only process projects with GitHub source URLs
+      if (!project.sourceUrl || !project.sourceUrl.includes("github.com")) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const readmeImage = await fetchReadmeImage(project.sourceUrl);
+
+        if (readmeImage) {
+          await ctx.runMutation(internal.projects.updateThumbnail, {
+            id: project._id,
+            thumbnailUrl: readmeImage,
+          });
+          console.log(`Updated thumbnail for "${project.name}": ${readmeImage}`);
+          updated++;
+        } else {
+          console.log(`No README image found for "${project.name}"`);
+          noImage++;
+        }
+      } catch (error) {
+        console.error(`Error fetching README for "${project.name}":`, error);
+        noImage++;
+      }
+    }
+
+    console.log(
+      `Thumbnail re-parse complete: ${updated} updated, ${noImage} no image found, ${skipped} skipped (no GitHub URL)`
+    );
+    return { updated, noImage, skipped };
   },
 });

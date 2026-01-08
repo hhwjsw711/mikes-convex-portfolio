@@ -25,8 +25,8 @@ export async function getAllArticles(ctx: QueryCtx) {
 }
 
 export async function getVisibleArticles(ctx: QueryCtx) {
-  const articles = await getAllArticles(ctx);
-  return articles.filter((a) => !a.isHidden);
+  // All articles from stack.convex.dev/author/mike-cann are "mine" and always visible
+  return await getAllArticles(ctx);
 }
 
 export async function upsertArticle(ctx: MutationCtx, articleData: ArticleData) {

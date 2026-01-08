@@ -1,6 +1,6 @@
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
-import { getVisibleProjects, upsertProject } from "./model/projects";
+import { getVisibleProjects, getAllProjects, upsertProject } from "./model/projects";
 
 export const list = query({
   args: {},
@@ -54,5 +54,24 @@ export const clearAll = internalMutation({
     }
     console.log(`Deleted ${count} projects`);
     return { deleted: count };
+  },
+});
+
+// Internal query to list all projects
+export const listAll = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await getAllProjects(ctx);
+  },
+});
+
+// Internal mutation to update a project's thumbnail
+export const updateThumbnail = internalMutation({
+  args: {
+    id: v.id("projects"),
+    thumbnailUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, thumbnailUrl }) => {
+    await ctx.db.patch(id, { thumbnailUrl });
   },
 });
