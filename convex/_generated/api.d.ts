@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as articles from "../articles.js";
+import type * as auth from "../auth.js";
 import type * as crons from "../crons.js";
 import type * as lib_extractProjects from "../lib/extractProjects.js";
 import type * as lib_githubReadme from "../lib/githubReadme.js";
@@ -38,6 +39,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   articles: typeof articles;
+  auth: typeof auth;
   crons: typeof crons;
   "lib/extractProjects": typeof lib_extractProjects;
   "lib/githubReadme": typeof lib_githubReadme;

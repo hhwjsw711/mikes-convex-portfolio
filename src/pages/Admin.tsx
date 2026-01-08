@@ -1,13 +1,7 @@
-import {
-  SignInButton,
-  SignOutButton,
-  useUser,
-  UserButton,
-} from "@clerk/clerk-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Link } from "react-router-dom";
-import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 
 type TabType = "videos" | "articles" | "projects";
@@ -16,13 +10,31 @@ type OwnershipFilter = "all" | "undecided" | "mine" | "notMine";
 type VisibilityFilter = "all" | "visible" | "hidden";
 
 export function Admin() {
-  const { isSignedIn, isLoaded } = useUser();
+  const navigate = useNavigate();
+  const [token, setToken] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("videos");
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
   const [ownershipFilter, setOwnershipFilter] = useState<OwnershipFilter>("all");
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("visible");
 
-  if (!isLoaded) {
+  // Check for auth token on mount
+  useEffect(() => {
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      navigate("/login");
+    } else {
+      setToken(authToken);
+    }
+  }, [navigate]);
+
+  // Verify the token with backend
+  const session = useQuery(
+    api.auth.verifySession,
+    token ? { token } : "skip"
+  );
+
+  // Loading state
+  if (!token || session === undefined) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
@@ -30,30 +42,18 @@ export function Admin() {
     );
   }
 
-  if (!isSignedIn) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white">
-        <AdminHeader />
-        <main className="container mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-6">Admin Access Required</h2>
-          <p className="text-gray-400 mb-8">
-            Please sign in to access the admin dashboard.
-          </p>
-          <SignInButton mode="modal">
-            <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-              Sign In
-            </button>
-          </SignInButton>
-        </main>
-      </div>
-    );
+  // Session invalid or expired
+  if (session === null) {
+    localStorage.removeItem("authToken");
+    navigate("/login");
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
-      <AdminHeader />
+      <AdminHeader token={token} />
       <main className="container mx-auto px-4 py-8">
-        <RefreshButtons />
+        <RefreshButtons token={token} />
         <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
         <FilterControls
           sortOrder={sortOrder}
@@ -70,14 +70,25 @@ export function Admin() {
           sortOrder={sortOrder}
           ownershipFilter={ownershipFilter}
           visibilityFilter={visibilityFilter}
+          token={token}
         />
       </main>
     </div>
   );
 }
 
-function AdminHeader() {
-  const { isSignedIn } = useUser();
+function AdminHeader({ token }: { token: string }) {
+  const navigate = useNavigate();
+  const logout = useMutation(api.auth.logout);
+
+  const handleLogout = async () => {
+    try {
+      await logout({ token });
+    } finally {
+      localStorage.removeItem("authToken");
+      navigate("/login");
+    }
+  };
 
   return (
     <header className="border-b border-gray-800 bg-[#111111]">
@@ -88,31 +99,29 @@ function AdminHeader() {
           </Link>
           <h1 className="text-xl font-bold text-orange-500">Admin Dashboard</h1>
         </div>
-        {isSignedIn ? (
-          <div className="flex items-center gap-4">
-            <UserButton afterSignOutUrl="/admin" />
-            <SignOutButton>
-              <button className="text-gray-400 hover:text-white transition-colors text-sm">
-                Sign Out
-              </button>
-            </SignOutButton>
-          </div>
-        ) : null}
+        <button
+          onClick={handleLogout}
+          className="text-gray-400 hover:text-white transition-colors text-sm"
+        >
+          Sign Out
+        </button>
       </div>
     </header>
   );
 }
 
-function RefreshButtons() {
+function RefreshButtons({ token }: { token: string }) {
   const triggerYouTubeRefresh = useMutation(api.admin.triggerYouTubeRefresh);
   const triggerStackRefresh = useMutation(api.admin.triggerStackRefresh);
+  const triggerXRefresh = useMutation(api.admin.triggerXRefresh);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [stackLoading, setStackLoading] = useState(false);
+  const [xLoading, setXLoading] = useState(false);
 
   const handleYouTubeRefresh = async () => {
     setYoutubeLoading(true);
     try {
-      await triggerYouTubeRefresh();
+      await triggerYouTubeRefresh({ token });
     } finally {
       setYoutubeLoading(false);
     }
@@ -121,9 +130,18 @@ function RefreshButtons() {
   const handleStackRefresh = async () => {
     setStackLoading(true);
     try {
-      await triggerStackRefresh();
+      await triggerStackRefresh({ token });
     } finally {
       setStackLoading(false);
+    }
+  };
+
+  const handleXRefresh = async () => {
+    setXLoading(true);
+    try {
+      await triggerXRefresh({ token });
+    } finally {
+      setXLoading(false);
     }
   };
 
@@ -152,6 +170,18 @@ function RefreshButtons() {
           <span>&#128196;</span>
         )}
         Refresh Stack
+      </button>
+      <button
+        onClick={handleXRefresh}
+        disabled={xLoading}
+        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+      >
+        {xLoading ? (
+          <span className="animate-spin">&#9696;</span>
+        ) : (
+          <span>𝕏</span>
+        )}
+        Refresh X
       </button>
     </div>
   );
@@ -259,24 +289,26 @@ function ContentManager({
   sortOrder,
   ownershipFilter,
   visibilityFilter,
+  token,
 }: {
   activeTab: TabType;
   sortOrder: SortOrder;
   ownershipFilter: OwnershipFilter;
   visibilityFilter: VisibilityFilter;
+  token: string;
 }) {
-  const content = useQuery(api.admin.getAllContent);
+  const content = useQuery(api.admin.getAllContent, { token });
 
   // Optimistic update for video ownership
   const setVideoIsMikes = useMutation(
     api.admin.setVideoIsMikes
   ).withOptimisticUpdate((localStore, args) => {
-    const currentContent = localStore.getQuery(api.admin.getAllContent, {});
+    const currentContent = localStore.getQuery(api.admin.getAllContent, { token });
     if (currentContent) {
       const updatedVideos = currentContent.videos.map((v) =>
         v._id === args.id ? { ...v, isMikes: args.isMikes } : v
       );
-      localStore.setQuery(api.admin.getAllContent, {}, {
+      localStore.setQuery(api.admin.getAllContent, { token }, {
         ...currentContent,
         videos: updatedVideos,
       });
@@ -295,7 +327,7 @@ function ContentManager({
     id: string,
     isMikes: "mine" | "notMine"
   ) => {
-    await setVideoIsMikes({ id: id as Id<"videos">, isMikes });
+    await setVideoIsMikes({ token, id: id as Id<"videos">, isMikes });
   };
 
   if (activeTab === "videos") {
@@ -377,6 +409,7 @@ function ContentManager({
             <ProjectAdminCard
               key={item._id}
               project={item}
+              token={token}
             />
           ))
         )}
@@ -534,6 +567,7 @@ function SimpleContentCard({
 
 function ProjectAdminCard({
   project,
+  token,
 }: {
   project: {
     _id: string;
@@ -546,6 +580,7 @@ function ProjectAdminCard({
     sourceType: "video" | "article";
     sourceId: string;
   };
+  token: string;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [sourceUrl, setSourceUrl] = useState(project.sourceUrl || "");
@@ -564,6 +599,7 @@ function ProjectAdminCard({
 
   const handleToggleHidden = async () => {
     await setProjectHidden({
+      token,
       id: project._id as Id<"projects">,
       isHidden: !project.isHidden,
     });
@@ -573,6 +609,7 @@ function ProjectAdminCard({
     setIsSaving(true);
     try {
       await updateProjectLinks({
+        token,
         id: project._id as Id<"projects">,
         sourceUrl: sourceUrl || undefined,
         demoUrl: demoUrl || undefined,
@@ -585,7 +622,7 @@ function ProjectAdminCard({
 
   const handleDelete = async () => {
     if (window.confirm(`Are you sure you want to delete "${project.name}"?`)) {
-      await deleteProject({ id: project._id as Id<"projects"> });
+      await deleteProject({ token, id: project._id as Id<"projects"> });
     }
   };
 

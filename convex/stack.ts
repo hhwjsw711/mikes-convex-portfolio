@@ -93,7 +93,7 @@ function decodeHtmlEntities(text: string): string {
 export const refresh = internalAction({
   args: {},
   handler: async (ctx) => {
-    const authorSlug = process.env.STACK_AUTHOR_SLUG || "mike-cann";
+    const authorSlug = "mike-cann";
 
     try {
       // Fetch the author page

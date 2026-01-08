@@ -59,7 +59,7 @@ export const refreshAll = internalAction({
   args: {},
   handler: async (ctx) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
-    const channelId = process.env.YOUTUBE_CHANNEL_ID;
+    const channelId = "UCoC_9mdiPwIu1sDxDtGQggQ";
 
     if (!apiKey || !channelId) {
       console.log(
@@ -244,7 +244,7 @@ export const refreshLatest = internalAction({
   args: {},
   handler: async (ctx) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
-    const channelId = process.env.YOUTUBE_CHANNEL_ID;
+    const channelId = "UCoC_9mdiPwIu1sDxDtGQggQ";
 
     if (!apiKey || !channelId) {
       console.log(

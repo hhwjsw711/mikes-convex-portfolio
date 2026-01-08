@@ -2,6 +2,13 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Simple auth sessions
+  sessions: defineTable({
+    token: v.string(),
+    email: v.string(),
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]),
+
   videos: defineTable({
     youtubeId: v.string(),
     title: v.string(),
