@@ -7,10 +7,12 @@ import { Resend } from "@convex-dev/resend";
 import { components } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
-const resend = new Resend(components.resend, {});
+const resend = new Resend(components.resend, {
+  testMode: false,
+});
 
 const ADMIN_EMAIL = "mike.cann@gmail.com";
-const FROM_EMAIL = "Portfolio Notifications <onboarding@resend.dev>";
+const FROM_EMAIL = "Convex Portfolio <convex-portfolio@mikecann.blog>";
 
 interface VideoForNotification {
   _id: Id<"videos">;
@@ -68,7 +70,7 @@ export const sendModerationNotification = internalAction({
 function generateModerationEmailHtml(videos: VideoForNotification[]): string {
   const adminUrl = process.env.SITE_URL
     ? `${process.env.SITE_URL}/admin`
-    : "https://your-site.com/admin";
+    : "https://mikes-convex-portfolio.mikeysee.workers.dev/admin";
 
   const videoItems = videos
     .map(

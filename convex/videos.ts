@@ -46,6 +46,14 @@ export const listMine = internalQuery({
   },
 });
 
+// Internal query to list all videos (for admin operations)
+export const listAll = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("videos").collect();
+  },
+});
+
 export const stats = query({
   args: {},
   handler: async (ctx) => {

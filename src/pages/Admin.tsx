@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -114,9 +114,12 @@ function RefreshButtons({ token }: { token: string }) {
   const triggerYouTubeRefresh = useMutation(api.admin.triggerYouTubeRefresh);
   const triggerStackRefresh = useMutation(api.admin.triggerStackRefresh);
   const triggerXRefresh = useMutation(api.admin.triggerXRefresh);
+  const sendTestEmail = useAction(api.admin.sendTestEmail);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [stackLoading, setStackLoading] = useState(false);
   const [xLoading, setXLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailResult, setEmailResult] = useState<string | null>(null);
 
   const handleYouTubeRefresh = async () => {
     setYoutubeLoading(true);
@@ -145,44 +148,78 @@ function RefreshButtons({ token }: { token: string }) {
     }
   };
 
+  const handleTestEmail = async () => {
+    setEmailLoading(true);
+    setEmailResult(null);
+    try {
+      const result = await sendTestEmail({ token });
+      setEmailResult(result.message);
+      setTimeout(() => setEmailResult(null), 5000);
+    } catch (error) {
+      setEmailResult(error instanceof Error ? error.message : "Failed to send");
+      setTimeout(() => setEmailResult(null), 5000);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   return (
-    <div className="flex gap-4 mb-8">
-      <button
-        onClick={handleYouTubeRefresh}
-        disabled={youtubeLoading}
-        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-      >
-        {youtubeLoading ? (
-          <span className="animate-spin">&#9696;</span>
-        ) : (
-          <span>&#9654;</span>
-        )}
-        Refresh YouTube
-      </button>
-      <button
-        onClick={handleStackRefresh}
-        disabled={stackLoading}
-        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-      >
-        {stackLoading ? (
-          <span className="animate-spin">&#9696;</span>
-        ) : (
-          <span>&#128196;</span>
-        )}
-        Refresh Stack
-      </button>
-      <button
-        onClick={handleXRefresh}
-        disabled={xLoading}
-        className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-      >
-        {xLoading ? (
-          <span className="animate-spin">&#9696;</span>
-        ) : (
-          <span>𝕏</span>
-        )}
-        Refresh X
-      </button>
+    <div className="flex flex-col gap-4 mb-8">
+      <div className="flex flex-wrap gap-4">
+        <button
+          onClick={handleYouTubeRefresh}
+          disabled={youtubeLoading}
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:bg-red-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          {youtubeLoading ? (
+            <span className="animate-spin">&#9696;</span>
+          ) : (
+            <span>&#9654;</span>
+          )}
+          Refresh YouTube
+        </button>
+        <button
+          onClick={handleStackRefresh}
+          disabled={stackLoading}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          {stackLoading ? (
+            <span className="animate-spin">&#9696;</span>
+          ) : (
+            <span>&#128196;</span>
+          )}
+          Refresh Stack
+        </button>
+        <button
+          onClick={handleXRefresh}
+          disabled={xLoading}
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          {xLoading ? (
+            <span className="animate-spin">&#9696;</span>
+          ) : (
+            <span>𝕏</span>
+          )}
+          Refresh X
+        </button>
+        <button
+          onClick={handleTestEmail}
+          disabled={emailLoading}
+          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          {emailLoading ? (
+            <span className="animate-spin">&#9696;</span>
+          ) : (
+            <span>&#9993;</span>
+          )}
+          Test Email
+        </button>
+      </div>
+      {emailResult && (
+        <div className="text-sm text-orange-400 bg-orange-900/20 px-4 py-2 rounded-lg">
+          {emailResult}
+        </div>
+      )}
     </div>
   );
 }
