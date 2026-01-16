@@ -27,6 +27,14 @@ export const getByYoutubeId = internalQuery({
   },
 });
 
+// Internal query to get video by ID (for notifications)
+export const getById = internalQuery({
+  args: { id: v.id("videos") },
+  handler: async (ctx, { id }) => {
+    return await ctx.db.get(id);
+  },
+});
+
 // Internal query to list all videos marked as "mine" (for batch processing)
 export const listMine = internalQuery({
   args: {},

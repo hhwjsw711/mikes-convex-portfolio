@@ -3,6 +3,7 @@
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 import { extractProjectLinks } from "./model/projects";
 import { extractProjectsWithLLM } from "./lib/extractProjects";
 import { getProjectThumbnail, fetchReadmeImage } from "./lib/githubReadme";
@@ -129,6 +130,8 @@ export const refreshAll = internalAction({
       // Step 4: Store each video and conditionally extract projects
       let processedCount = 0;
       let projectsExtracted = 0;
+      const newVideoIds: Id<"videos">[] = [];
+
       for (const video of allVideos) {
         const thumbnail =
           video.snippet.thumbnails.high?.url ||
@@ -142,7 +145,7 @@ export const refreshAll = internalAction({
         });
 
         // Upsert the video (preserves isMikes status if existing)
-        await ctx.runMutation(internal.videos.upsert, {
+        const upsertResult = await ctx.runMutation(internal.videos.upsert, {
           youtubeId: video.id,
           title: video.snippet.title,
           description: video.snippet.description,
@@ -159,6 +162,11 @@ export const refreshAll = internalAction({
             : undefined,
           duration: video.contentDetails?.duration,
         });
+
+        // Track new videos for notification
+        if (upsertResult.isNew) {
+          newVideoIds.push(upsertResult.id);
+        }
 
         // Only extract projects if video is marked as "mine"
         // New videos start as "undecided" and skip project extraction
@@ -227,8 +235,15 @@ export const refreshAll = internalAction({
         processedCount++;
       }
 
-      console.log(`YouTube full refresh complete. Processed ${processedCount} videos.`);
-      return { success: true, videosProcessed: processedCount };
+      // Send notification if there are new videos needing moderation
+      if (newVideoIds.length > 0) {
+        await ctx.runAction(internal.notifications.sendModerationNotification, {
+          newVideoIds,
+        });
+      }
+
+      console.log(`YouTube full refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`);
+      return { success: true, videosProcessed: processedCount, newVideos: newVideoIds.length };
     } catch (error) {
       console.error("Error refreshing YouTube videos:", error);
       return {
@@ -293,6 +308,8 @@ export const refreshLatest = internalAction({
       // Step 4: Store each video and conditionally extract projects
       let processedCount = 0;
       let projectsExtracted = 0;
+      const newVideoIds: Id<"videos">[] = [];
+
       for (const video of videosData.items) {
         const thumbnail =
           video.snippet.thumbnails.high?.url ||
@@ -306,7 +323,7 @@ export const refreshLatest = internalAction({
         });
 
         // Upsert the video (preserves isMikes status if existing)
-        await ctx.runMutation(internal.videos.upsert, {
+        const upsertResult = await ctx.runMutation(internal.videos.upsert, {
           youtubeId: video.id,
           title: video.snippet.title,
           description: video.snippet.description,
@@ -323,6 +340,11 @@ export const refreshLatest = internalAction({
             : undefined,
           duration: video.contentDetails?.duration,
         });
+
+        // Track new videos for notification
+        if (upsertResult.isNew) {
+          newVideoIds.push(upsertResult.id);
+        }
 
         // Only extract projects if video is marked as "mine"
         // New videos start as "undecided" and skip project extraction
@@ -391,8 +413,15 @@ export const refreshLatest = internalAction({
         processedCount++;
       }
 
-      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos, extracted ${projectsExtracted} projects.`);
-      return { success: true, videosProcessed: processedCount };
+      // Send notification if there are new videos needing moderation
+      if (newVideoIds.length > 0) {
+        await ctx.runAction(internal.notifications.sendModerationNotification, {
+          newVideoIds,
+        });
+      }
+
+      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`);
+      return { success: true, videosProcessed: processedCount, newVideos: newVideoIds.length };
     } catch (error) {
       console.error("Error refreshing latest YouTube videos:", error);
       return {

@@ -14,7 +14,15 @@
       "Skill(dev-browser)",
       "Bash(npm run typecheck:*)",
       "Bash(cat:*)",
-      "WebFetch(domain:docs.convex.dev)"
+      "WebFetch(domain:docs.convex.dev)",
+      "Skill(dev-browser:dev-browser)",
+      "Bash(dir /b \"C:\\\\dev\\\\convex\\\\mikes-convex-portfolio\\\\.claude\")",
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(bun run typecheck:*)"
     ]
+  },
+  "enabledPlugins": {
+    "context7@claude-plugins-official": true
   }
 }

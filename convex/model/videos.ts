@@ -1,9 +1,15 @@
 import { QueryCtx, MutationCtx } from "../_generated/server";
+import { Id } from "../_generated/dataModel";
 import {
   insertVideoAggregates,
   replaceVideoAggregates,
   deleteVideoAggregates,
 } from "../videoAggregates";
+
+export interface UpsertVideoResult {
+  id: Id<"videos">;
+  isNew: boolean;
+}
 
 export interface VideoData {
   youtubeId: string;
@@ -46,7 +52,10 @@ export async function getVisibleVideos(ctx: QueryCtx) {
   );
 }
 
-export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {
+export async function upsertVideo(
+  ctx: MutationCtx,
+  videoData: VideoData
+): Promise<UpsertVideoResult> {
   const existing = await getVideoByYoutubeId(ctx, videoData.youtubeId);
   if (existing) {
     // Update existing video and sync aggregates
@@ -56,7 +65,7 @@ export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {
     if (newDoc) {
       await replaceVideoAggregates(ctx, existing, newDoc);
     }
-    return existing._id;
+    return { id: existing._id, isNew: false };
   }
   // Insert new video with isMikes: "undecided" and sync aggregates
   const id = await ctx.db.insert("videos", {
@@ -67,7 +76,7 @@ export async function upsertVideo(ctx: MutationCtx, videoData: VideoData) {
   if (newDoc) {
     await insertVideoAggregates(ctx, newDoc);
   }
-  return id;
+  return { id, isNew: true };
 }
 
 export async function deleteAllVideos(ctx: MutationCtx) {
