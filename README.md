@@ -1,3 +1,5 @@
+![screenshot](./docs/chrome_nvu7LpFcDr.png)
+
 # Mike's Convex Portfolio
 
 A content aggregation app that showcases all the content I've created for [Convex](https://convex.dev) - videos, articles, and projects - all in one place.
@@ -24,11 +26,13 @@ A content aggregation app that showcases all the content I've created for [Conve
 This project was an experiment in "vibe coding" - building an entire app purely through conversational AI without traditional IDE usage. Some highlights from the experience:
 
 ### What Worked Well
+
 - **Plugins**: Easy to install MCP servers, skills, and tools (like [dev-browser](https://github.com/SawyerHood/dev-browser) for screenshots)
 - **Plan Mode**: Claude intelligently enters planning mode for complex tasks, asking clarifying questions before diving in
 - **Agentic Intelligence**: The agent used the right tools at the right time - including the Convex CLI for calling internal mutations
 
 ### Lessons Learned
+
 - Terminal UIs have discoverability challenges compared to graphical IDEs
 - Model switching mid-prompt can be tricky
 - Token costs add up quickly with Opus 4.5 (~$60 for this project)
@@ -36,6 +40,7 @@ This project was an experiment in "vibe coding" - building an entire app purely 
 ## Getting Started
 
 ### Prerequisites
+
 - [Bun](https://bun.sh) (or npm/yarn)
 - A [Convex](https://convex.dev) account
 - YouTube Data API key
@@ -45,6 +50,7 @@ This project was an experiment in "vibe coding" - building an entire app purely 
 
 1. Clone the repository
 2. Install dependencies:
+
    ```bash
    bun install
    ```
