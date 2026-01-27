@@ -66,7 +66,7 @@ export async function extractProjectsWithLLM(
     const client = new Anthropic({ apiKey });
 
     const response = await client.messages.create({
-      model: "claude-3-5-haiku-latest",
+      model: "claude-sonnet-4-5",
       max_tokens: 1024,
       messages: [
         {
