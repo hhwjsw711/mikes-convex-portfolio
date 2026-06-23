@@ -68,6 +68,12 @@ export const getAllContent = query({
         .withIndex("by_publishedAt")
         .order("desc")
         .collect(),
+      // Sort code contributions by committedAt descending (newest first)
+      codeContributions: await ctx.db
+        .query("codeContributions")
+        .withIndex("by_committedAt")
+        .order("desc")
+        .collect(),
       // Projects don't have publishedAt, so use default _creationTime
       projects: await ctx.db.query("projects").order("desc").collect(),
     };
@@ -104,6 +110,16 @@ export const triggerXRefresh = mutation({
     // Schedule the refresh action
     await ctx.scheduler.runAfter(0, internal.x.refresh, {});
     return { success: true, message: "X refresh triggered" };
+  },
+});
+
+// Trigger GitHub contribution refresh (admin only)
+export const triggerGitHubRefresh = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    await requireAuth(ctx, token);
+    await ctx.scheduler.runAfter(0, internal.github.refreshCodeContributions, {});
+    return { success: true, message: "GitHub contribution refresh triggered" };
   },
 });
 

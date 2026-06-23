@@ -56,6 +56,20 @@ export default defineSchema({
     .index("by_tweetId", ["tweetId"])
     .index("by_publishedAt", ["publishedAt"]),
 
+  // Public commits from the open source Convex backend repo
+  codeContributions: defineTable({
+    sha: v.string(),
+    shortSha: v.string(),
+    title: v.string(),
+    rawTitle: v.string(),
+    committedAt: v.string(),
+    url: v.string(),
+    repository: v.string(),
+    authorName: v.string(),
+  })
+    .index("by_sha", ["sha"])
+    .index("by_committedAt", ["committedAt"]),
+
   // Projects are created from "mine" content, can be hidden by admin
   projects: defineTable({
     name: v.string(),

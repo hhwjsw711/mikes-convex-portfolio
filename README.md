@@ -11,6 +11,7 @@ A content aggregation app that showcases all the content I've created for [Conve
 - **YouTube Integration**: Fetches and displays videos from a YouTube channel via the Data API v3
 - **Stack Articles**: Scrapes articles from [stack.convex.dev](https://stack.convex.dev) for a specific author
 - **AI Project Extraction**: Uses Claude to automatically parse video/article descriptions and extract GitHub repos and demo links into project entries
+- **Convex Code Contributions**: Fetches public commits authored by Mike in the open source Convex backend repo
 - **Admin Dashboard**: Authenticated backend for content moderation (marking videos as mine/not mine, hiding projects)
 - **Automated Refresh**: Hourly cron jobs keep content up to date
 
@@ -61,6 +62,7 @@ This project was an experiment in "vibe coding" - building an entire app purely 
    - `YOUTUBE_CHANNEL_ID` - Target YouTube channel ID
    - `STACK_AUTHOR_SLUG` - Author slug for stack.convex.dev
    - `ANTHROPIC_API_KEY` - For AI-powered project extraction
+   - `GITHUB_TOKEN` - Optional token for GitHub API rate limits when fetching public Convex backend commits
 
 4. Start the development servers:
    ```bash
@@ -104,7 +106,8 @@ bun test --run       # Run tests once
 1. **Content Fetching**: Cron jobs trigger `youtube:refresh` and `stack:refresh` hourly
 2. **Video Moderation**: New videos start as "undecided" - admin marks them as "mine" or "notMine"
 3. **Project Extraction**: When content is marked as "mine", Claude analyzes the description to extract GitHub/demo links
-4. **Public Display**: Only "mine" videos and all articles are shown publicly, with their extracted projects
+4. **Code Contributions**: A daily GitHub refresh stores public Convex backend commits authored by Mike
+5. **Public Display**: Only "mine" videos and all articles are shown publicly, with their extracted projects and code contributions
 
 ## License
 

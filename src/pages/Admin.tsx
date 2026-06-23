@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Id } from "../../convex/_generated/dataModel";
 
-type TabType = "videos" | "articles" | "projects";
+type TabType = "videos" | "articles" | "projects" | "codeContributions";
 type SortOrder = "newest" | "oldest";
 type OwnershipFilter = "all" | "undecided" | "mine" | "notMine";
 type VisibilityFilter = "all" | "visible" | "hidden";
@@ -114,10 +114,12 @@ function RefreshButtons({ token }: { token: string }) {
   const triggerYouTubeRefresh = useMutation(api.admin.triggerYouTubeRefresh);
   const triggerStackRefresh = useMutation(api.admin.triggerStackRefresh);
   const triggerXRefresh = useMutation(api.admin.triggerXRefresh);
+  const triggerGitHubRefresh = useMutation(api.admin.triggerGitHubRefresh);
   const sendTestEmail = useAction(api.admin.sendTestEmail);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [stackLoading, setStackLoading] = useState(false);
   const [xLoading, setXLoading] = useState(false);
+  const [githubLoading, setGithubLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailResult, setEmailResult] = useState<string | null>(null);
 
@@ -145,6 +147,15 @@ function RefreshButtons({ token }: { token: string }) {
       await triggerXRefresh({ token });
     } finally {
       setXLoading(false);
+    }
+  };
+
+  const handleGitHubRefresh = async () => {
+    setGithubLoading(true);
+    try {
+      await triggerGitHubRefresh({ token });
+    } finally {
+      setGithubLoading(false);
     }
   };
 
@@ -203,6 +214,18 @@ function RefreshButtons({ token }: { token: string }) {
           Refresh X
         </button>
         <button
+          onClick={handleGitHubRefresh}
+          disabled={githubLoading}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          {githubLoading ? (
+            <span className="animate-spin">&#9696;</span>
+          ) : (
+            <span>&lt;/&gt;</span>
+          )}
+          Refresh GitHub
+        </button>
+        <button
           onClick={handleTestEmail}
           disabled={emailLoading}
           className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-800 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -235,6 +258,7 @@ function TabBar({
     { id: "videos", label: "Videos" },
     { id: "articles", label: "Articles" },
     { id: "projects", label: "Projects" },
+    { id: "codeContributions", label: "Code Contributions" },
   ];
 
   return (
@@ -454,6 +478,29 @@ function ContentManager({
     );
   }
 
+  if (activeTab === "codeContributions") {
+    const items = sortOrder === "oldest"
+      ? [...content.codeContributions].reverse()
+      : content.codeContributions;
+
+    return (
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {items.length === 0 ? (
+          <p className="col-span-full text-gray-400 text-center py-8">
+            No code contributions found.
+          </p>
+        ) : (
+          items.map((item) => (
+            <CodeContributionAdminCard
+              key={item._id}
+              item={item}
+            />
+          ))
+        )}
+      </div>
+    );
+  }
+
   // Articles (read-only)
   // Data comes pre-sorted from backend (newest first), reverse if user wants oldest first
   const items = sortOrder === "oldest"
@@ -473,6 +520,43 @@ function ContentManager({
         ))
       )}
     </div>
+  );
+}
+
+function CodeContributionAdminCard({
+  item,
+}: {
+  item: {
+    _id: string;
+    title: string;
+    shortSha: string;
+    url: string;
+    repository: string;
+    committedAt: string;
+  };
+}) {
+  const formattedDate = new Date(item.committedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+  return (
+    <a
+      href={item.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex flex-col gap-3 rounded-lg border border-gray-700 bg-gray-900 p-4 transition-colors hover:border-emerald-500/70"
+    >
+      <div className="flex items-center justify-between gap-3 text-xs text-gray-500">
+        <span>{formattedDate}</span>
+        <span className="font-mono text-gray-400">{item.shortSha}</span>
+      </div>
+      <h3 className="line-clamp-3 text-sm font-medium text-white">
+        {item.title}
+      </h3>
+      <p className="truncate text-xs text-gray-500">{item.repository}</p>
+    </a>
   );
 }
 

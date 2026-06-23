@@ -11,7 +11,9 @@
 import type * as admin from "../admin.js";
 import type * as articles from "../articles.js";
 import type * as auth from "../auth.js";
+import type * as codeContributions from "../codeContributions.js";
 import type * as crons from "../crons.js";
+import type * as github from "../github.js";
 import type * as lib_extractProjects from "../lib/extractProjects.js";
 import type * as lib_githubReadme from "../lib/githubReadme.js";
 import type * as lib_normalization from "../lib/normalization.js";
@@ -19,6 +21,7 @@ import type * as lib_videoUtils from "../lib/videoUtils.js";
 import type * as migrations_backfillVideoAggregates from "../migrations/backfillVideoAggregates.js";
 import type * as migrations_migrateIsHiddenToIsMikes from "../migrations/migrateIsHiddenToIsMikes.js";
 import type * as model_articles from "../model/articles.js";
+import type * as model_codeContributions from "../model/codeContributions.js";
 import type * as model_projects from "../model/projects.js";
 import type * as model_tweets from "../model/tweets.js";
 import type * as model_videos from "../model/videos.js";
@@ -41,7 +44,9 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   articles: typeof articles;
   auth: typeof auth;
+  codeContributions: typeof codeContributions;
   crons: typeof crons;
+  github: typeof github;
   "lib/extractProjects": typeof lib_extractProjects;
   "lib/githubReadme": typeof lib_githubReadme;
   "lib/normalization": typeof lib_normalization;
@@ -49,6 +54,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/backfillVideoAggregates": typeof migrations_backfillVideoAggregates;
   "migrations/migrateIsHiddenToIsMikes": typeof migrations_migrateIsHiddenToIsMikes;
   "model/articles": typeof model_articles;
+  "model/codeContributions": typeof model_codeContributions;
   "model/projects": typeof model_projects;
   "model/tweets": typeof model_tweets;
   "model/videos": typeof model_videos;

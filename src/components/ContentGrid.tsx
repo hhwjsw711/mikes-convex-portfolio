@@ -7,6 +7,7 @@ import Masonry from "react-masonry-css";
 import { ContentCard } from "./ContentCard";
 import { TweetCard } from "./TweetCard";
 import { ProjectCard } from "./ProjectCard";
+import { CodeContributionCard } from "./CodeContributionCard";
 import { LoadingState } from "./LoadingState";
 
 type VideoTab = "longform" | "shorts";
@@ -16,6 +17,7 @@ interface ContentGridProps {
   articles: Doc<"articles">[];
   tweets: Doc<"tweets">[];
   projects: Doc<"projects">[];
+  codeContributions: Doc<"codeContributions">[];
   filter: ContentType;
   isLoading: boolean;
 }
@@ -42,6 +44,7 @@ export function ContentGrid({
   articles,
   tweets,
   projects,
+  codeContributions,
   filter,
   isLoading,
 }: ContentGridProps) {
@@ -181,11 +184,18 @@ export function ContentGrid({
   const showArticles = filter === "all" || filter === "articles";
   const showTweets = filter === "all" || filter === "tweets";
   const showProjects = filter === "all" || filter === "projects";
+  const showCodeContributions =
+    filter === "all" || filter === "codeContributions";
 
   // Combine and sort all content by date
   const allContent: Array<{
-    type: "video" | "article" | "tweet" | "project";
-    data: Doc<"videos"> | Doc<"articles"> | Doc<"tweets"> | Doc<"projects">;
+    type: "video" | "article" | "tweet" | "project" | "codeContribution";
+    data:
+      | Doc<"videos">
+      | Doc<"articles">
+      | Doc<"tweets">
+      | Doc<"projects">
+      | Doc<"codeContributions">;
     date: string;
   }> = [];
 
@@ -225,10 +235,50 @@ export function ContentGrid({
     });
   }
 
+  if (showCodeContributions) {
+    codeContributions.forEach((contribution) => {
+      allContent.push({
+        type: "codeContribution",
+        data: contribution,
+        date: contribution.committedAt,
+      });
+    });
+  }
+
   // Sort by date descending
   allContent.sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
+
+  if (filter === "codeContributions") {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-semibold text-white">
+            Convex Code Contributions
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm text-gray-400">
+            Public commits from my work on Convex&apos;s open source backend
+            and developer tooling.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {codeContributions.length > 0 ? (
+            codeContributions.map((contribution) => (
+              <CodeContributionCard
+                key={`code-${contribution._id}`}
+                contribution={contribution}
+              />
+            ))
+          ) : (
+            <p className="col-span-full py-8 text-center text-gray-400">
+              No Convex code contributions found
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (allContent.length === 0) {
     return <EmptyState />;
@@ -259,6 +309,18 @@ export function ContentGrid({
           return (
             <div key={`tweet-${(item.data as Doc<"tweets">)._id}`} className="mb-6">
               <TweetCard tweet={item.data as Doc<"tweets">} />
+            </div>
+          );
+        }
+        if (item.type === "codeContribution") {
+          return (
+            <div
+              key={`code-${(item.data as Doc<"codeContributions">)._id}`}
+              className="mb-6"
+            >
+              <CodeContributionCard
+                contribution={item.data as Doc<"codeContributions">}
+              />
             </div>
           );
         }

@@ -6,7 +6,13 @@ import { FilterBar } from "../components/FilterBar";
 import { VideoStatsCards } from "../components/VideoStatsCards";
 import { useState } from "react";
 
-export type ContentType = "all" | "videos" | "articles" | "tweets" | "projects";
+export type ContentType =
+  | "all"
+  | "videos"
+  | "articles"
+  | "tweets"
+  | "projects"
+  | "codeContributions";
 
 export function Home() {
   const [filter, setFilter] = useState<ContentType>("all");
@@ -14,16 +20,22 @@ export function Home() {
   const articles = useQuery(api.articles.list);
   const tweets = useQuery(api.tweets.list);
   const projects = useQuery(api.projects.list);
+  const codeContributions = useQuery(api.codeContributions.list);
   const videoStats = useQuery(api.videos.stats);
 
   const isLoading =
-    videos === undefined || articles === undefined || tweets === undefined || projects === undefined;
+    videos === undefined ||
+    articles === undefined ||
+    tweets === undefined ||
+    projects === undefined ||
+    codeContributions === undefined;
 
   const counts = {
     videos: videos?.length ?? 0,
     articles: articles?.length ?? 0,
     tweets: tweets?.length ?? 0,
     projects: projects?.length ?? 0,
+    codeContributions: codeContributions?.length ?? 0,
   };
 
   return (
@@ -44,6 +56,7 @@ export function Home() {
           articles={articles ?? []}
           tweets={tweets ?? []}
           projects={projects ?? []}
+          codeContributions={codeContributions ?? []}
           filter={filter}
           isLoading={isLoading}
         />

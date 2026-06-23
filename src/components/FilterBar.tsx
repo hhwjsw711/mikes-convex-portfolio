@@ -8,6 +8,7 @@ interface FilterBarProps {
     articles: number;
     tweets: number;
     projects: number;
+    codeContributions: number;
   };
 }
 
@@ -51,17 +52,38 @@ function ProjectIcon({ className }: { className?: string }) {
   );
 }
 
+function CodeContributionIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 const filters: { value: ContentType; label: string; icon: typeof GridIcon }[] = [
   { value: "all", label: "All", icon: GridIcon },
   { value: "videos", label: "Videos", icon: VideoIcon },
   { value: "articles", label: "Articles", icon: ArticleIcon },
   { value: "tweets", label: "Tweets", icon: TweetIcon },
   { value: "projects", label: "Projects", icon: ProjectIcon },
+  {
+    value: "codeContributions",
+    label: "Code",
+    icon: CodeContributionIcon,
+  },
 ];
 
 export function FilterBar({ currentFilter, onFilterChange, counts }: FilterBarProps) {
   const getCount = (filter: ContentType): number => {
-    if (filter === "all") return counts.videos + counts.articles + counts.tweets + counts.projects;
+    if (filter === "all") {
+      return (
+        counts.videos +
+        counts.articles +
+        counts.tweets +
+        counts.projects +
+        counts.codeContributions
+      );
+    }
     return counts[filter];
   };
 

@@ -39,6 +39,14 @@ if (!disableCrons) {
     internal.x.refresh,
     {}
   );
+
+  // Refresh public Convex backend commits every 24 hours
+  crons.daily(
+    "refreshGitHubContributions",
+    { hourUTC: 7, minuteUTC: 0 },
+    internal.github.refreshCodeContributions,
+    {}
+  );
 } else {
   console.log("Cron jobs disabled via DISABLE_CRONS environment variable");
 }
