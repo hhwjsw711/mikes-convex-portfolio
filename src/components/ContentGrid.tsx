@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { ContentType } from "../pages/Home";
@@ -11,6 +11,7 @@ import { CodeContributionCard } from "./CodeContributionCard";
 import { LoadingState } from "./LoadingState";
 
 type VideoTab = "longform" | "shorts";
+const INITIAL_VISIBLE_ITEMS = 250;
 
 interface ContentGridProps {
   videos: Doc<"videos">[];
@@ -49,6 +50,11 @@ export function ContentGrid({
   isLoading,
 }: ContentGridProps) {
   const [videoTab, setVideoTab] = useState<VideoTab>("longform");
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_ITEMS);
+
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_ITEMS);
+  }, [filter]);
 
   // Query for sub-category stats using aggregates (must be called before any early returns)
   const subCategoryStats = useQuery(
@@ -284,6 +290,9 @@ export function ContentGrid({
     return <EmptyState />;
   }
 
+  const visibleContent = allContent.slice(0, visibleCount);
+  const hiddenCount = allContent.length - visibleContent.length;
+
   // Use masonry layout for tweets and mixed content
   const breakpointColumns = {
     default: 3,
@@ -292,48 +301,68 @@ export function ContentGrid({
   };
 
   return (
-    <Masonry
-      breakpointCols={breakpointColumns}
-      className="flex -ml-6 w-auto"
-      columnClassName="pl-6 bg-clip-padding"
-    >
-      {allContent.map((item) => {
-        if (item.type === "project") {
+    <div>
+      <Masonry
+        breakpointCols={breakpointColumns}
+        className="flex -ml-6 w-auto"
+        columnClassName="pl-6 bg-clip-padding"
+      >
+        {visibleContent.map((item) => {
+          if (item.type === "project") {
+            return (
+              <div key={`project-${(item.data as Doc<"projects">)._id}`} className="mb-6">
+                <ProjectCard project={item.data as Doc<"projects">} />
+              </div>
+            );
+          }
+          if (item.type === "tweet") {
+            return (
+              <div key={`tweet-${(item.data as Doc<"tweets">)._id}`} className="mb-6">
+                <TweetCard tweet={item.data as Doc<"tweets">} />
+              </div>
+            );
+          }
+          if (item.type === "codeContribution") {
+            return (
+              <div
+                key={`code-${(item.data as Doc<"codeContributions">)._id}`}
+                className="mb-6"
+              >
+                <CodeContributionCard
+                  contribution={item.data as Doc<"codeContributions">}
+                />
+              </div>
+            );
+          }
           return (
-            <div key={`project-${(item.data as Doc<"projects">)._id}`} className="mb-6">
-              <ProjectCard project={item.data as Doc<"projects">} />
-            </div>
-          );
-        }
-        if (item.type === "tweet") {
-          return (
-            <div key={`tweet-${(item.data as Doc<"tweets">)._id}`} className="mb-6">
-              <TweetCard tweet={item.data as Doc<"tweets">} />
-            </div>
-          );
-        }
-        if (item.type === "codeContribution") {
-          return (
-            <div
-              key={`code-${(item.data as Doc<"codeContributions">)._id}`}
-              className="mb-6"
-            >
-              <CodeContributionCard
-                contribution={item.data as Doc<"codeContributions">}
+            <div key={`${item.type}-${item.data._id}`} className="mb-6">
+              <ContentCard
+                type={item.type}
+                data={item.data as Doc<"videos"> | Doc<"articles">}
               />
             </div>
           );
-        }
-        return (
-          <div key={`${item.type}-${item.data._id}`} className="mb-6">
-            <ContentCard
-              type={item.type}
-              data={item.data as Doc<"videos"> | Doc<"articles">}
-            />
-          </div>
-        );
-      })}
-    </Masonry>
+        })}
+      </Masonry>
+
+      {hiddenCount > 0 && (
+        <div className="mt-2 flex flex-col items-center gap-3 pb-8 text-sm text-gray-400">
+          <p>
+            Showing {visibleContent.length.toLocaleString()} of{" "}
+            {allContent.length.toLocaleString()}
+          </p>
+          <button
+            type="button"
+            onClick={() =>
+              setVisibleCount((count) => count + INITIAL_VISIBLE_ITEMS)
+            }
+            className="rounded-full bg-gray-800 px-5 py-2 font-medium text-gray-200 transition-colors hover:bg-gray-700"
+          >
+            Load more
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
