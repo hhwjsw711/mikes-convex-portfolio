@@ -43,27 +43,34 @@ Content to analyze:
  */
 export async function extractProjectsWithLLM(
   text: string,
-  title?: string
+  title?: string,
 ): Promise<ExtractedProject[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
+  const baseURL = process.env.ANTHROPIC_BASE_URL;
 
   if (!apiKey) {
-    console.log("ANTHROPIC_API_KEY not configured, falling back to regex extraction");
+    console.log(
+      "ANTHROPIC_API_KEY not configured, falling back to regex extraction",
+    );
     return [];
   }
 
   // Truncate very long text to avoid token limits
   const maxLength = 8000;
-  const truncatedText = text.length > maxLength
-    ? text.slice(0, maxLength) + "...[truncated]"
-    : text;
+  const truncatedText =
+    text.length > maxLength
+      ? text.slice(0, maxLength) + "...[truncated]"
+      : text;
 
   const contentToAnalyze = title
     ? `Title: ${title}\n\n${truncatedText}`
     : truncatedText;
 
   try {
-    const client = new Anthropic({ apiKey });
+    const client = new Anthropic({
+      apiKey,
+      baseURL: baseURL || undefined,
+    });
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-5",

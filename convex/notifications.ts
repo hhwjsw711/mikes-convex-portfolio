@@ -11,8 +11,8 @@ const resend = new Resend(components.resend, {
   testMode: false,
 });
 
-const ADMIN_EMAIL = "mike.cann@gmail.com";
-const FROM_EMAIL = "Convex Portfolio <convex-portfolio@mikecann.blog>";
+const ADMIN_EMAIL = "hhwjsw711@gmail.com";
+const FROM_EMAIL = "Convex Portfolio <convex-portfolio@isllm.com>";
 
 interface VideoForNotification {
   _id: Id<"videos">;
@@ -70,7 +70,7 @@ export const sendModerationNotification = internalAction({
 function generateModerationEmailHtml(videos: VideoForNotification[]): string {
   const adminUrl = process.env.SITE_URL
     ? `${process.env.SITE_URL}/admin`
-    : "https://mikes-convex-portfolio.mikeysee.workers.dev/admin";
+    : "https://mikes-convex-portfolio.hhwjsw711.workers.dev/admin";
 
   const videoItems = videos
     .map(
@@ -104,7 +104,7 @@ function generateModerationEmailHtml(videos: VideoForNotification[]): string {
           </table>
         </td>
       </tr>
-    `
+    `,
     )
     .join("");
 

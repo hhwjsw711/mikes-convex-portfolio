@@ -1,8 +1,15 @@
-import { mutation, query, action, internalQuery, QueryCtx, MutationCtx } from "./_generated/server";
+import {
+  mutation,
+  query,
+  action,
+  internalQuery,
+  QueryCtx,
+  MutationCtx,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
-const ADMIN_EMAIL = "mike.cann@gmail.com";
+const ADMIN_EMAIL = "hhwjsw711@gmail.com";
 
 // Helper to check if user is authenticated and is admin
 async function requireAuth(ctx: QueryCtx | MutationCtx, token: string) {
@@ -36,7 +43,11 @@ export const verifyToken = internalQuery({
       .withIndex("by_token", (q) => q.eq("token", token))
       .first();
 
-    if (!session || session.expiresAt < Date.now() || session.email !== ADMIN_EMAIL) {
+    if (
+      !session ||
+      session.expiresAt < Date.now() ||
+      session.email !== ADMIN_EMAIL
+    ) {
       throw new Error("Unauthorized");
     }
 
@@ -118,7 +129,11 @@ export const triggerGitHubRefresh = mutation({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
     await requireAuth(ctx, token);
-    await ctx.scheduler.runAfter(0, internal.github.refreshCodeContributions, {});
+    await ctx.scheduler.runAfter(
+      0,
+      internal.github.refreshCodeContributions,
+      {},
+    );
     return { success: true, message: "GitHub contribution refresh triggered" };
   },
 });
@@ -144,9 +159,12 @@ export const setVideoIsMikes = mutation({
       await ctx.scheduler.runAfter(
         0,
         internal.youtube.extractProjectsForVideo,
-        { youtubeId: video.youtubeId }
+        { youtubeId: video.youtubeId },
       );
-      return { success: true, message: "Video marked as mine, project extraction scheduled" };
+      return {
+        success: true,
+        message: "Video marked as mine, project extraction scheduled",
+      };
     }
 
     return { success: true, message: `Video marked as ${isMikes}` };
@@ -181,7 +199,10 @@ export const setProjectHidden = mutation({
     if (!project) throw new Error("Project not found");
 
     await ctx.db.patch(id, { isHidden });
-    return { success: true, message: isHidden ? "Project hidden" : "Project visible" };
+    return {
+      success: true,
+      message: isHidden ? "Project hidden" : "Project visible",
+    };
   },
 });
 
@@ -230,7 +251,7 @@ export const sendTestEmail = action({
   args: { token: v.string() },
   handler: async (
     ctx,
-    { token }
+    { token },
   ): Promise<{ success: boolean; message: string }> => {
     // Get all videos to pick a random one
     const allVideos = await ctx.runQuery(internal.videos.listAll, {});
@@ -252,7 +273,7 @@ export const sendTestEmail = action({
     // Send the test notification
     const result = await ctx.runAction(
       internal.notifications.sendModerationNotification,
-      { newVideoIds: [randomVideo._id] }
+      { newVideoIds: [randomVideo._id] },
     );
 
     if (result.sent) {

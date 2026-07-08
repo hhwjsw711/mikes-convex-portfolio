@@ -2,7 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // Simple auth using environment variables
-const ADMIN_EMAIL = "mike.cann@gmail.com";
+const ADMIN_EMAIL = "hhwjsw711@gmail.com";
 
 // Login mutation - checks email and password
 export const login = mutation({

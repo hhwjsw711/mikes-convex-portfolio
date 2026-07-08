@@ -129,8 +129,12 @@ export const refresh = internalAction({
 export const manualRefresh = action({
   args: {},
   handler: async (
-    ctx
-  ): Promise<{ success: boolean; tweetsProcessed?: number; error?: string }> => {
+    ctx,
+  ): Promise<{
+    success: boolean;
+    tweetsProcessed?: number;
+    error?: string;
+  }> => {
     return await ctx.runAction(internal.x.refresh, {});
   },
 });
@@ -140,7 +144,7 @@ export const getUserId = action({
   args: {},
   handler: async (ctx) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
-    const username = "mikeysee";
+    const username = "hhwjsw711";
 
     if (!bearerToken) {
       console.log("X_BEARER_TOKEN not configured");
@@ -159,7 +163,10 @@ export const getUserId = action({
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`X API error: ${response.status} - ${errorText}`);
-        return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+        return {
+          success: false,
+          error: `HTTP ${response.status}: ${errorText}`,
+        };
       }
 
       const data = await response.json();

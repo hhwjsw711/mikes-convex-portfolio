@@ -60,11 +60,11 @@ export const refreshAll = internalAction({
   args: {},
   handler: async (ctx) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
-    const channelId = "UCoC_9mdiPwIu1sDxDtGQggQ";
+    const channelId = "UCMiDzhfU0VZdTh6C_Igz0IQ";
 
     if (!apiKey || !channelId) {
       console.log(
-        "YouTube API key or channel ID not configured. Skipping refresh."
+        "YouTube API key or channel ID not configured. Skipping refresh.",
       );
       return { success: false, error: "Missing configuration" };
     }
@@ -72,7 +72,7 @@ export const refreshAll = internalAction({
     try {
       // Step 1: Get the uploads playlist ID
       const channelResponse = await fetch(
-        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
+        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`,
       );
       const channelData: YouTubeChannelResponse = await channelResponse.json();
 
@@ -89,9 +89,11 @@ export const refreshAll = internalAction({
       let nextPageToken: string | undefined;
 
       do {
-        const pageTokenParam = nextPageToken ? `&pageToken=${nextPageToken}` : "";
+        const pageTokenParam = nextPageToken
+          ? `&pageToken=${nextPageToken}`
+          : "";
         const playlistResponse = await fetch(
-          `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageTokenParam}&key=${apiKey}`
+          `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageTokenParam}&key=${apiKey}`,
         );
         const playlistData: YouTubePlaylistItemsResponse =
           await playlistResponse.json();
@@ -118,7 +120,7 @@ export const refreshAll = internalAction({
       for (let i = 0; i < videoIds.length; i += 50) {
         const batch = videoIds.slice(i, i + 50);
         const videosResponse = await fetch(
-          `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${batch.join(",")}&key=${apiKey}`
+          `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${batch.join(",")}&key=${apiKey}`,
         );
         const videosData: YouTubeVideosResponse = await videosResponse.json();
 
@@ -140,9 +142,12 @@ export const refreshAll = internalAction({
           "";
 
         // Check if video already exists and get its isMikes status
-        const existingVideo = await ctx.runQuery(internal.videos.getByYoutubeId, {
-          youtubeId: video.id,
-        });
+        const existingVideo = await ctx.runQuery(
+          internal.videos.getByYoutubeId,
+          {
+            youtubeId: video.id,
+          },
+        );
 
         // Upsert the video (preserves isMikes status if existing)
         const upsertResult = await ctx.runMutation(internal.videos.upsert, {
@@ -179,7 +184,7 @@ export const refreshAll = internalAction({
         // Extract and store projects from video description using LLM
         const llmProjects = await extractProjectsWithLLM(
           video.snippet.description,
-          video.snippet.title
+          video.snippet.title,
         );
 
         if (llmProjects.length > 0) {
@@ -187,13 +192,15 @@ export const refreshAll = internalAction({
           for (const project of llmProjects) {
             // Skip projects without source or demo URL
             if (!project.sourceUrl && !project.demoUrl) {
-              console.log(`Skipping project "${project.name}" - no source or demo URL`);
+              console.log(
+                `Skipping project "${project.name}" - no source or demo URL`,
+              );
               continue;
             }
             // Try to get thumbnail from GitHub README, fall back to video thumbnail
             const projectThumbnail = await getProjectThumbnail(
               project.sourceUrl,
-              thumbnail
+              thumbnail,
             );
             await ctx.runMutation(internal.projects.upsert, {
               name: project.name,
@@ -215,7 +222,7 @@ export const refreshAll = internalAction({
             // Try to get thumbnail from GitHub README, fall back to video thumbnail
             const projectThumbnail = await getProjectThumbnail(
               projectLinks.sourceUrl,
-              thumbnail
+              thumbnail,
             );
             await ctx.runMutation(internal.projects.upsert, {
               name: projectLinks.projectName || video.snippet.title,
@@ -242,8 +249,14 @@ export const refreshAll = internalAction({
         });
       }
 
-      console.log(`YouTube full refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`);
-      return { success: true, videosProcessed: processedCount, newVideos: newVideoIds.length };
+      console.log(
+        `YouTube full refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`,
+      );
+      return {
+        success: true,
+        videosProcessed: processedCount,
+        newVideos: newVideoIds.length,
+      };
     } catch (error) {
       console.error("Error refreshing YouTube videos:", error);
       return {
@@ -259,11 +272,11 @@ export const refreshLatest = internalAction({
   args: {},
   handler: async (ctx) => {
     const apiKey = process.env.YOUTUBE_API_KEY;
-    const channelId = "UCoC_9mdiPwIu1sDxDtGQggQ";
+    const channelId = "UCMiDzhfU0VZdTh6C_Igz0IQ";
 
     if (!apiKey || !channelId) {
       console.log(
-        "YouTube API key or channel ID not configured. Skipping refresh."
+        "YouTube API key or channel ID not configured. Skipping refresh.",
       );
       return { success: false, error: "Missing configuration" };
     }
@@ -271,7 +284,7 @@ export const refreshLatest = internalAction({
     try {
       // Step 1: Get the uploads playlist ID
       const channelResponse = await fetch(
-        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`
+        `${YOUTUBE_API_BASE}/channels?part=contentDetails&id=${channelId}&key=${apiKey}`,
       );
       const channelData: YouTubeChannelResponse = await channelResponse.json();
 
@@ -285,7 +298,7 @@ export const refreshLatest = internalAction({
 
       // Step 2: Get video IDs from the uploads playlist (latest 20 only)
       const playlistResponse = await fetch(
-        `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=20&key=${apiKey}`
+        `${YOUTUBE_API_BASE}/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=20&key=${apiKey}`,
       );
       const playlistData: YouTubePlaylistItemsResponse =
         await playlistResponse.json();
@@ -296,12 +309,12 @@ export const refreshLatest = internalAction({
       }
 
       const videoIds = playlistData.items.map(
-        (item) => item.snippet.resourceId.videoId
+        (item) => item.snippet.resourceId.videoId,
       );
 
       // Step 3: Get full video details
       const videosResponse = await fetch(
-        `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`
+        `${YOUTUBE_API_BASE}/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(",")}&key=${apiKey}`,
       );
       const videosData: YouTubeVideosResponse = await videosResponse.json();
 
@@ -318,9 +331,12 @@ export const refreshLatest = internalAction({
           "";
 
         // Check if video already exists and get its isMikes status
-        const existingVideo = await ctx.runQuery(internal.videos.getByYoutubeId, {
-          youtubeId: video.id,
-        });
+        const existingVideo = await ctx.runQuery(
+          internal.videos.getByYoutubeId,
+          {
+            youtubeId: video.id,
+          },
+        );
 
         // Upsert the video (preserves isMikes status if existing)
         const upsertResult = await ctx.runMutation(internal.videos.upsert, {
@@ -357,7 +373,7 @@ export const refreshLatest = internalAction({
         // Extract and store projects from video description using LLM
         const llmProjects = await extractProjectsWithLLM(
           video.snippet.description,
-          video.snippet.title
+          video.snippet.title,
         );
 
         if (llmProjects.length > 0) {
@@ -365,13 +381,15 @@ export const refreshLatest = internalAction({
           for (const project of llmProjects) {
             // Skip projects without source or demo URL
             if (!project.sourceUrl && !project.demoUrl) {
-              console.log(`Skipping project "${project.name}" - no source or demo URL`);
+              console.log(
+                `Skipping project "${project.name}" - no source or demo URL`,
+              );
               continue;
             }
             // Try to get thumbnail from GitHub README, fall back to video thumbnail
             const projectThumbnail = await getProjectThumbnail(
               project.sourceUrl,
-              thumbnail
+              thumbnail,
             );
             await ctx.runMutation(internal.projects.upsert, {
               name: project.name,
@@ -393,7 +411,7 @@ export const refreshLatest = internalAction({
             // Try to get thumbnail from GitHub README, fall back to video thumbnail
             const projectThumbnail = await getProjectThumbnail(
               projectLinks.sourceUrl,
-              thumbnail
+              thumbnail,
             );
             await ctx.runMutation(internal.projects.upsert, {
               name: projectLinks.projectName || video.snippet.title,
@@ -420,8 +438,14 @@ export const refreshLatest = internalAction({
         });
       }
 
-      console.log(`YouTube latest refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`);
-      return { success: true, videosProcessed: processedCount, newVideos: newVideoIds.length };
+      console.log(
+        `YouTube latest refresh complete. Processed ${processedCount} videos, ${newVideoIds.length} new.`,
+      );
+      return {
+        success: true,
+        videosProcessed: processedCount,
+        newVideos: newVideoIds.length,
+      };
     } catch (error) {
       console.error("Error refreshing latest YouTube videos:", error);
       return {
@@ -435,7 +459,13 @@ export const refreshLatest = internalAction({
 // Manual trigger for testing (full refresh)
 export const manualRefresh = action({
   args: {},
-  handler: async (ctx): Promise<{ success: boolean; videosProcessed?: number; error?: string }> => {
+  handler: async (
+    ctx,
+  ): Promise<{
+    success: boolean;
+    videosProcessed?: number;
+    error?: string;
+  }> => {
     return await ctx.runAction(internal.youtube.refreshAll, {});
   },
 });
@@ -445,7 +475,9 @@ export const extractProjectsForVideo = internalAction({
   args: { youtubeId: v.string() },
   handler: async (ctx, { youtubeId }) => {
     // Get the video from the database
-    const video = await ctx.runQuery(internal.videos.getByYoutubeId, { youtubeId });
+    const video = await ctx.runQuery(internal.videos.getByYoutubeId, {
+      youtubeId,
+    });
     if (!video) {
       console.error(`Video not found: ${youtubeId}`);
       return { success: false, error: "Video not found" };
@@ -454,7 +486,10 @@ export const extractProjectsForVideo = internalAction({
     const thumbnail = video.thumbnailUrl || "";
 
     // Extract and store projects from video description using LLM
-    const llmProjects = await extractProjectsWithLLM(video.description, video.title);
+    const llmProjects = await extractProjectsWithLLM(
+      video.description,
+      video.title,
+    );
 
     let projectsExtracted = 0;
 
@@ -463,13 +498,15 @@ export const extractProjectsForVideo = internalAction({
       for (const project of llmProjects) {
         // Skip projects without source or demo URL
         if (!project.sourceUrl && !project.demoUrl) {
-          console.log(`Skipping project "${project.name}" - no source or demo URL`);
+          console.log(
+            `Skipping project "${project.name}" - no source or demo URL`,
+          );
           continue;
         }
         // Try to get thumbnail from GitHub README, fall back to video thumbnail
         const projectThumbnail = await getProjectThumbnail(
           project.sourceUrl,
-          thumbnail
+          thumbnail,
         );
         await ctx.runMutation(internal.projects.upsert, {
           name: project.name,
@@ -491,7 +528,7 @@ export const extractProjectsForVideo = internalAction({
         // Try to get thumbnail from GitHub README, fall back to video thumbnail
         const projectThumbnail = await getProjectThumbnail(
           projectLinks.sourceUrl,
-          thumbnail
+          thumbnail,
         );
         await ctx.runMutation(internal.projects.upsert, {
           name: projectLinks.projectName || video.title,
@@ -509,7 +546,7 @@ export const extractProjectsForVideo = internalAction({
     }
 
     console.log(
-      `Project extraction complete for video "${video.title}". Extracted ${projectsExtracted} projects.`
+      `Project extraction complete for video "${video.title}". Extracted ${projectsExtracted} projects.`,
     );
     return { success: true, projectsExtracted };
   },
@@ -530,11 +567,18 @@ export const batchExtractProjects = internalAction({
     let videosWithProjects = 0;
 
     for (const video of mineVideos) {
-      const result = await ctx.runAction(internal.youtube.extractProjectsForVideo, {
-        youtubeId: video.youtubeId,
-      });
+      const result = await ctx.runAction(
+        internal.youtube.extractProjectsForVideo,
+        {
+          youtubeId: video.youtubeId,
+        },
+      );
 
-      if (result.success && result.projectsExtracted && result.projectsExtracted > 0) {
+      if (
+        result.success &&
+        result.projectsExtracted &&
+        result.projectsExtracted > 0
+      ) {
         totalProjects += result.projectsExtracted;
         videosWithProjects++;
       }
@@ -542,12 +586,14 @@ export const batchExtractProjects = internalAction({
 
       // Log progress every 10 videos
       if (videosProcessed % 10 === 0) {
-        console.log(`Processed ${videosProcessed}/${mineVideos.length} videos...`);
+        console.log(
+          `Processed ${videosProcessed}/${mineVideos.length} videos...`,
+        );
       }
     }
 
     console.log(
-      `Batch extraction complete: ${videosProcessed} videos processed, ${videosWithProjects} had projects, ${totalProjects} total projects extracted`
+      `Batch extraction complete: ${videosProcessed} videos processed, ${videosWithProjects} had projects, ${totalProjects} total projects extracted`,
     );
     return { videosProcessed, videosWithProjects, totalProjects };
   },
@@ -556,7 +602,13 @@ export const batchExtractProjects = internalAction({
 // Manual trigger for batch extraction (admin use)
 export const manualBatchExtract = action({
   args: {},
-  handler: async (ctx): Promise<{ videosProcessed: number; videosWithProjects: number; totalProjects: number }> => {
+  handler: async (
+    ctx,
+  ): Promise<{
+    videosProcessed: number;
+    videosWithProjects: number;
+    totalProjects: number;
+  }> => {
     return await ctx.runAction(internal.youtube.batchExtractProjects, {});
   },
 });
@@ -588,7 +640,9 @@ export const reparseThumbnails = internalAction({
             id: project._id,
             thumbnailUrl: readmeImage,
           });
-          console.log(`Updated thumbnail for "${project.name}": ${readmeImage}`);
+          console.log(
+            `Updated thumbnail for "${project.name}": ${readmeImage}`,
+          );
           updated++;
         } else {
           console.log(`No README image found for "${project.name}"`);
@@ -601,7 +655,7 @@ export const reparseThumbnails = internalAction({
     }
 
     console.log(
-      `Thumbnail re-parse complete: ${updated} updated, ${noImage} no image found, ${skipped} skipped (no GitHub URL)`
+      `Thumbnail re-parse complete: ${updated} updated, ${noImage} no image found, ${skipped} skipped (no GitHub URL)`,
     );
     return { updated, noImage, skipped };
   },
@@ -651,16 +705,20 @@ export const backfillProjectDates = internalAction({
           id: project._id,
           publishedAt,
         });
-        console.log(`Updated "${project.name}" with publishedAt: ${publishedAt}`);
+        console.log(
+          `Updated "${project.name}" with publishedAt: ${publishedAt}`,
+        );
         updated++;
       } else {
-        console.log(`Could not find source for "${project.name}" (${project.sourceType}: ${project.sourceId})`);
+        console.log(
+          `Could not find source for "${project.name}" (${project.sourceType}: ${project.sourceId})`,
+        );
         notFound++;
       }
     }
 
     console.log(
-      `Date backfill complete: ${updated} updated, ${skipped} already had date, ${notFound} source not found`
+      `Date backfill complete: ${updated} updated, ${skipped} already had date, ${notFound} source not found`,
     );
     return { updated, skipped, notFound };
   },
