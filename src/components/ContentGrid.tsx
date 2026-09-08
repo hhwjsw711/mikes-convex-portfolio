@@ -264,8 +264,7 @@ export function ContentGrid({
             Code Contributions
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-gray-400">
-            Public commits from my work on Convex&apos;s open source backend
-            and developer tooling.
+            Public commits from my open source contributions.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
