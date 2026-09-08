@@ -12,7 +12,7 @@ const resend = new Resend(components.resend, {
 });
 
 const ADMIN_EMAIL = "hhwjsw711@gmail.com";
-const FROM_EMAIL = "Convex Portfolio <convex-portfolio@isllm.com>";
+const FROM_EMAIL = "Hugo's Portfolio <portfolio@isllm.com>";
 
 interface VideoForNotification {
   _id: Id<"videos">;

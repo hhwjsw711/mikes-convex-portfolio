@@ -261,7 +261,7 @@ export function ContentGrid({
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-white">
-            Convex Code Contributions
+            Code Contributions
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-gray-400">
             Public commits from my work on Convex&apos;s open source backend
@@ -278,7 +278,7 @@ export function ContentGrid({
             ))
           ) : (
             <p className="col-span-full py-8 text-center text-gray-400">
-              No Convex code contributions found
+              No code contributions found
             </p>
           )}
         </div>
@@ -371,7 +371,7 @@ function EmptyState() {
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <p className="text-gray-400">No content found</p>
       <p className="mt-2 text-sm text-gray-500">
-        Content will appear here once fetched from YouTube and Convex Stack
+        Content will appear here once fetched from sources
       </p>
     </div>
   );

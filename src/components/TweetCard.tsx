@@ -80,13 +80,13 @@ export function TweetCard({ tweet }: TweetCardProps) {
     <article className="group block overflow-hidden rounded-lg border border-blue-600/20 bg-[#111] p-4 transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10">
       <div className="flex items-start gap-3">
         <img
-          src="/me_400x400.jpg"
-          alt="Hu Hongwei"
+          src="/2d0KSyoA_400x400.jpg"
+          alt="hugo"
           className="h-10 w-10 rounded-full"
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 text-sm">
-            <span className="font-semibold text-white">Hu Hongwei</span>
+            <span className="font-semibold text-white">hugo</span>
             <span className="text-gray-500">@hhwjsw711</span>
             <span className="text-gray-600">.</span>
             <span className="text-gray-500">{formattedDate}</span>

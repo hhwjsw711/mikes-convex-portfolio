@@ -1,6 +1,6 @@
 const GitHubCorner = () => (
   <a
-    href="https://github.com/mikecann/mikes-convex-portfolio"
+    href="https://github.com/hhwjsw711/mikes-convex-portfolio"
     target="_blank"
     rel="noopener noreferrer"
     className="fixed top-0 right-0 z-50 group"

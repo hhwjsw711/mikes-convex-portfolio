@@ -1,3 +1,14 @@
+---
+AIGC:
+  ContentProducer: '001191110102MAD55U9H0F10002'
+  ContentPropagator: '001191110102MAD55U9H0F10002'
+  Label: '1'
+  ProduceID: '31881e89-64f3-4479-be95-4405dec7f936'
+  PropagateID: '31881e89-64f3-4479-be95-4405dec7f936'
+  ReservedCode1: '75ec7101-bda5-4eb5-a01d-2574a984cb0c'
+  ReservedCode2: '75ec7101-bda5-4eb5-a01d-2574a984cb0c'
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -29,67 +40,127 @@ bun test -t "returns videos"                  # Run tests matching pattern
 
 ## Project Architecture
 
-This is a content aggregation app built with **React + Vite** (frontend) and **Convex** (backend). It aggregates content from YouTube and Convex Stack articles for a specific creator.
+This is a content aggregation portfolio built with **React + Vite** (frontend) and **Convex** (backend). It aggregates content from YouTube, Convex Stack articles, X (Twitter) posts, and GitHub code contributions for a specific creator.
 
-### Data Flow
+### Data Sources & Flow
 
-1. **Content Sources** (`convex/youtube.ts`, `convex/stack.ts`):
-   - `youtube.ts` - Node action that fetches videos from YouTube Data API v3
-   - `stack.ts` - Node action that scrapes articles from stack.convex.dev/author/{slug}
-   - Both extract GitHub/demo links from content to create project entries
+1. **YouTube** (`convex/youtube.ts`) - Node action that fetches videos from YouTube Data API v3
+   - Channel ID hardcoded: `UCMiDzhfU0VZdTh6C_Igz0IQ`
+   - Extracts video metadata (title, description, thumbnail, stats, duration)
+   - New videos marked `isMikes: "undecided"`, admin reviews and marks "mine" or "notMine"
+   - When marked "mine", triggers AI project extraction (Claude API)
+2. **Stack** (`convex/stack.ts`) - Scrapes articles from stack.convex.dev/author/mike-cann
+3. **X/Twitter** (`convex/x.ts`) - Fetches tweets via X API v2 using Bearer Token
+4. **GitHub** (`convex/github.ts`) - Fetches commits from get-convex/convex-backend by author mikecann
 
-2. **Scheduled Refresh** (`convex/crons.ts`):
-   - Hourly cron jobs trigger `youtube:refresh` and `stack:refresh`
+### Scheduled Refresh (`convex/crons.ts`)
 
-3. **Data Layer** (`convex/model/`):
-   - `projects.ts` - Project CRUD and link extraction logic (`extractProjectLinks`)
-   - `videos.ts`, `articles.ts` - Domain-specific model helpers
+- YouTube latest: every 12 hours
+- YouTube all: every 48 hours
+- Stack: hourly (offset 30 min)
+- X: daily 6AM UTC
+- GitHub: daily 7AM UTC
+- Set `DISABLE_CRONS=true` in Convex env to disable
 
-4. **API Layer** (`convex/videos.ts`, `convex/articles.ts`, `convex/projects.ts`):
-   - Public queries: `list` (filters to show only visible items)
-   - Internal mutations: `add`, `upsert` (used by refresh actions)
+### Data Layer (`convex/model/`)
 
-5. **Admin** (`convex/admin.ts`):
-   - Protected by email check (`requireAuth` helper)
-   - `setVideoIsMikes` - set video ownership status ("mine" or "notMine")
-   - `getAllContent` - returns all items for admin review
-   - `clearAllProjects` - delete all projects
-   - `triggerYouTubeRefresh`, `triggerStackRefresh` - manual refresh
+- `videos.ts` - Video CRUD with aggregate sync (views/likes/comments)
+- `articles.ts` - Article CRUD
+- `projects.ts` - Project CRUD, link extraction, fuzzy dedup via `normalizedName`
+- `tweets.ts` - Tweet CRUD
+- `codeContributions.ts` - Code contribution CRUD with commit title cleaning
+
+### API Layer (`convex/videos.ts`, `articles.ts`, `projects.ts`, `tweets.ts`, `codeContributions.ts`)
+
+- Public queries: `list` (filters to show only visible items)
+- Internal mutations: `upsert`, `add` (used by refresh actions)
+
+### AI Project Extraction (`convex/lib/extractProjects.ts`)
+
+- Uses Anthropic Claude API (`claude-sonnet-4-5`) to extract project info from video/article text
+- Falls back to regex extraction if no API key or LLM fails
+- Extracts GitHub/demo URLs, project name, description
+- Fetches README images from GitHub for thumbnails (`convex/lib/githubReadme.ts`)
+- Fuzzy name matching for dedup (`convex/lib/normalization.ts`): Levenshtein + Jaccard + substring
+
+### Video Aggregates (`convex/videoAggregates.ts`)
+
+- Three `@convex-dev/aggregate` instances: views, likes, comments
+- Split by video type: `longform` (>=3min) vs `shorts` (<3min)
+- Only aggregates videos where `isMikes === "mine"`
+
+### Email Notifications (`convex/notifications.ts`)
+
+- Uses `@convex-dev/resend` to send moderation emails
+- Sends to admin when new videos are fetched
+- From: `Hugo's Portfolio <portfolio@isllm.com>`
+- To: `hhwjsw711@gmail.com`
+
+### Admin (`convex/admin.ts`)
+
+- Protected by session-based auth (`convex/auth.ts`)
+- `setVideoIsMikes` - set video ownership, triggers project extraction when marked "mine"
+- `getAllContent` - returns all items (including hidden) for admin review
+- `setProjectHidden`, `updateProjectLinks`, `deleteProject` - project management
+- `triggerYouTubeRefresh`, `triggerStackRefresh`, `triggerXRefresh`, `triggerGitHubRefresh` - manual refresh
+- `sendTestEmail` - sends a test moderation email
+
+### Authentication (`convex/auth.ts`)
+
+- Self-built session mechanism (not Clerk)
+- Login with email + password → store session token in DB (7-day expiry)
+- Admin email: `hhwjsw711@gmail.com`
+- Token stored in localStorage on frontend
 
 ### Frontend Structure
 
-- `src/main.tsx` - Clerk + Convex provider setup
-- `src/pages/Home.tsx` - Public content display
-- `src/pages/Admin.tsx` - Admin panel (requires Clerk auth)
-- `src/components/` - UI components (ContentGrid, ContentCard, FilterBar, etc.)
+- `src/main.tsx` - ConvexProvider setup
+- `src/App.tsx` - Routes: `/` (Home), `/login` (Login), `/admin` (Admin)
+- `src/pages/Home.tsx` - Public content display with filter bar
+- `src/pages/Login.tsx` - Email + password login
+- `src/pages/Admin.tsx` - Admin panel with tabs (Videos, Articles, Projects, Code Contributions)
+- `src/components/` - UI components (Header, ContentGrid, ContentCard, FilterBar, VideoStatsCards, ProjectCard, TweetCard, CodeContributionCard, etc.)
 
-### Authentication
+### Database Schema (`convex/schema.ts`)
 
-- **Clerk** for frontend auth
-- **Convex auth** configured in `convex/auth.config.ts`
-- Admin access restricted to `mike.cann@gmail.com` in `convex/admin.ts`
-
-### Database Schema
-
-Three tables in `convex/schema.ts`:
-- `videos` - indexed by `youtubeId`, `publishedAt`, and `isMikes`
-  - `isMikes` field: "undecided" (new videos), "mine" (visible), or "notMine" (hidden)
+Six tables:
+- `videos` - indexed by `youtubeId`, `publishedAt`, `isMikes`
+  - `isMikes` field: "undecided" (new), "mine" (visible), "notMine" (hidden)
   - Only videos with `isMikes === "mine"` are shown publicly
-- `articles` - indexed by `slug` and `publishedAt` (always visible, from mike-cann endpoint)
-- `projects` - indexed by `name`, `sourceType`, `sourceId`, `sourceUrl`, and `normalizedName`
-  - Projects are only created from "mine" content, so always visible
-  - Uses fuzzy name matching via `normalizedName` to prevent duplicates
+- `articles` - indexed by `slug`, `publishedAt` (always visible)
+- `tweets` - indexed by `tweetId`, `publishedAt` (always visible)
+- `projects` - indexed by `name`, `sourceId`, `sourceUrl`, `normalizedName`
+  - Uses fuzzy name matching to prevent duplicates
+  - Can be hidden by admin
+- `codeContributions` - indexed by `sha`, `committedAt`
+- `sessions` - indexed by `token` (auth sessions)
+
+### Migrations (`convex/migrations/`)
+
+- `backfillVideoAggregates.ts` - Backfill aggregates for existing videos
+- `migrateIsHiddenToIsMikes.ts` - Convert old `isHidden` boolean to `isMikes` field
 
 ## Environment Variables
 
 See `.env.local.example` for required variables:
 - `VITE_CONVEX_URL` - Convex deployment URL
-- `VITE_CLERK_PUBLISHABLE_KEY` - Clerk frontend key
 - `YOUTUBE_API_KEY` - YouTube Data API v3 key (set in Convex dashboard)
 - `YOUTUBE_CHANNEL_ID` - Target YouTube channel ID
 - `STACK_AUTHOR_SLUG` - Author slug for stack.convex.dev
-- `CLERK_JWT_ISSUER_DOMAIN` - Clerk JWT issuer (set in Convex dashboard)
+- `X_BEARER_TOKEN` - X API Bearer Token
+- `X_USER_ID` - X numeric user ID
+- `GITHUB_TOKEN` - GitHub API token (optional, raises rate limits)
+- `ADMIN_PASSWORD` - Admin login password
+- `ANTHROPIC_API_KEY` - Claude API key for project extraction
+- `ANTHROPIC_BASE_URL` - Optional Claude API proxy URL
+- `DISABLE_CRONS` - Set to "true" to disable cron jobs
 
 ## Testing
 
 Tests use `convex-test` with Vitest. Test files are in `convex/__tests__/` and test Convex functions directly without network calls.
+
+## Deployment
+
+Deployed on Cloudflare Workers via `wrangler.jsonc` (SPA mode). Convex backend deployed separately.
+
+> AI生成

@@ -32,7 +32,7 @@ export function CodeContributionCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
             <span className="rounded bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-300">
-              Convex code
+              Code
             </span>
             <span>{formattedDate}</span>
           </div>
